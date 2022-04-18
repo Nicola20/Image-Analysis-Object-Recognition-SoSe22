@@ -38,12 +38,40 @@ def compute_gray_value(img):
     return img
 
 
+def contrast_stretching(img, min_val, max_val):
+    val_range = max_val - min_val
+    outliers = int(0.1 * val_range)
+    height, width = img.shape
+    contrast_img = np.zeros((height, width), img.dtype)
+    # implement here the formula for the contrast stretching
+
 def image_enhancement(img):
     gray = compute_gray_value(img)
-    plt.subplot(1, 2, 1)
+    # prepare the gray values for the histogram
+    hist_data_gray = gray.flatten()
+
+    # get the min, max value for the contrast stretching
+    min_val = min(hist_data_gray)
+    max_val = max(hist_data_gray)
+    print(min_val)
+    print(max_val)
+    contrast_stretching(gray, min_val, max_val)
+
+    plt.figure(1)
+    plt.subplot(1, 3, 1)
     plt.imshow(gray, cmap='gray')
-    plt.subplot(1, 2, 2)
+    plt.subplot(1, 3, 2)
     plt.imshow(img, cmap='gray')
+    plt.subplot(1, 3, 3)
+    plt.hist(hist_data_gray, edgecolor="black")
+    '''
+    plt.figure(2)
+    plt.subplot(1, 3, 1)
+    plt.imshow(gray, cmap='gray')
+    plt.subplot(1, 3, 2)
+    plt.imshow(img, cmap='gray')
+    plt.subplot(1, 3, 3)
+    plt.hist(hist_data_gray, edgecolor="black")'''
     plt.show()
 
 #def  binarization():
