@@ -34,16 +34,25 @@ def compute_gray_value(img):
     blue = img[:, :, 2]
 
     # convert the color channels to double so that they won't overflow and result in a false value
-    img = np.uint8(((np.uint16(red) + np.uint16(green) + np.uint16(blue)) / 3))
+    img = np.uint8(((np.float32(red) + green + blue) / 3))
     return img
 
 
 def contrast_stretching(img, min_val, max_val):
-    val_range = max_val - min_val
-    outliers = int(0.1 * val_range)
     height, width = img.shape
     contrast_img = np.zeros((height, width), img.dtype)
-    # implement here the formula for the contrast stretching
+    outliers = 0.1 * (max_val - min_val)
+    high = max_val - outliers
+    low = min_val + outliers
+
+    # implement here the formula for the contrast stretching - eventuell lösche outliers
+    for y in range(0, height):
+        for x in range(0, width):
+            streched_val = ((img[y, x] - min_val) / (max_val - min_val))
+            contrast_img[y, x] = np.uint8(streched_val * 255)
+
+    return contrast_img
+
 
 def image_enhancement(img):
     gray = compute_gray_value(img)
@@ -53,9 +62,9 @@ def image_enhancement(img):
     # get the min, max value for the contrast stretching
     min_val = min(hist_data_gray)
     max_val = max(hist_data_gray)
-    print(min_val)
-    print(max_val)
-    contrast_stretching(gray, min_val, max_val)
+    contrast_img = contrast_stretching(gray, min_val, max_val)
+
+    contrast_hist_data = contrast_img.flatten()
 
     plt.figure(1)
     plt.subplot(1, 3, 1)
@@ -63,15 +72,15 @@ def image_enhancement(img):
     plt.subplot(1, 3, 2)
     plt.imshow(img, cmap='gray')
     plt.subplot(1, 3, 3)
-    plt.hist(hist_data_gray, edgecolor="black")
-    '''
+    plt.hist(hist_data_gray, bins=(max_val-min_val))
+
     plt.figure(2)
     plt.subplot(1, 3, 1)
     plt.imshow(gray, cmap='gray')
     plt.subplot(1, 3, 2)
-    plt.imshow(img, cmap='gray')
+    plt.imshow(contrast_img, cmap='gray')
     plt.subplot(1, 3, 3)
-    plt.hist(hist_data_gray, edgecolor="black")'''
+    plt.hist(contrast_hist_data, bins=(max(contrast_hist_data) - min(contrast_hist_data)))
     plt.show()
 
 #def  binarization():
