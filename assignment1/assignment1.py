@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """
 --------------------------------------------------------------------------------------------
-@Authors: Nicola Lea Libera (117073), Jenny Döring (), Josephin Kröger ()
+@Authors: Nicola Lea Libera (117073), Jenny Döring (119611), Josephin Kröger ()
 Description: Source code to Assignment 1 of the course Image Analysis and Object Recognition
              at Bauhaus-Universität Weimar.
 --------------------------------------------------------------------------------------------
@@ -10,6 +10,7 @@ import numpy as np
 import cv2
 from matplotlib import pyplot as plt
 import argparse
+from PIL import Image
 
 
 def read_input():
@@ -64,67 +65,153 @@ def contrast_stretching(img, min_val, max_val):
     return contrast_img
 
 
-def image_enhancement(gray):
+def image_enhancement(gray, folder):
     print("enhancing image...")
     # prepare the gray values for the histogram and contrast stretching
+    hist_data_gray = None
     hist_data_gray = gray.flatten()
 
     # get the min, max value for the contrast stretching
+    min_val = 0
     min_val = min(hist_data_gray)
+    max_val = 0
     max_val = max(hist_data_gray)
+    contrast_img = None
     contrast_img = contrast_stretching(gray, min_val, max_val)
+    contrast_hist_data = None
     contrast_hist_data = contrast_img.flatten()
 
     # Show the resulting images and corresponding histograms
-    plt.figure(1)
+    plt.figure()
     plt.subplot(1, 2, 1)
     plt.imshow(gray, cmap='gray')
     plt.title("Gray")
+    plt.axis('off')
     plt.subplot(1, 2, 2)
     plt.hist(hist_data_gray, bins=(max_val-min_val))
     plt.xlabel('Intensity Value')
     plt.ylabel('Number of Pixels')
-    plt.savefig("grayscale.jpg")
+    plt.tight_layout()
+    plt.savefig(str(folder) + "grayscale_hist.jpg")
 
-    plt.figure(2)
+    plt.figure()
     plt.subplot(1, 2, 1)
     plt.imshow(contrast_img, cmap='gray')
     plt.title("Enhanced")
+    plt.axis('off')
     plt.subplot(1, 2, 2)
     plt.hist(contrast_hist_data, bins=(max(contrast_hist_data) - min(contrast_hist_data)))
     plt.locator_params(axis="x", nbins=6)
     plt.xlabel('Intensity Value')
     plt.ylabel('Number of Pixels')
-    plt.savefig("enhanced.jpg")
+    plt.tight_layout()
+    plt.savefig(str(folder) + "enhanced_hist.jpg")
+
+    plt.figure()
+    plt.imshow(contrast_img, cmap='gray')
+    # plt.title("Enhanced")
+    plt.axis('off')
+    plt.savefig(str(folder) + "enhanced.jpg")
 
     return contrast_img
 
 
-def  binarization(img):
+def  binarization(img, folder):
     print("creating binary mask...")
-    # 70 is quite a good value (2nd parameter is the threshold value
+    # 70 is quite a good value (2nd parameter is the threshold value)
     thresh, binary = cv2.threshold(img, 70, 255, cv2.THRESH_BINARY_INV)
     thresh = int(thresh)
     # get the min, max value for the contrast stretching
-    plt.figure(3)
+    plt.figure()
     plt.imshow(binary, cmap='gray')
     plt.title("Binary Mask with Threshold=" + str(thresh))
-    plt.savefig("binary" + str(thresh) + ".jpg")
+    plt.axis('off')
+    plt.savefig(str(folder) + "binary" + str(thresh) + ".jpg")
 
     return binary
 
 
-#def morpholigical_operators():
-    # implement task 3 here
+def morphological_opening(img, folder):
+    # inspired by https://opencv24-python-tutorials.readthedocs.io/en/latest/py_tutorials/py_imgproc/py_morphological_ops/py_morphological_ops.html
+    print("doing morphological opening...")
+    structuring_element = np.ones((5, 5), np.uint8)
+    opening = cv2.morphologyEx(img, cv2.MORPH_OPEN, structuring_element)
+
+    # plt.figure()
+    # plt.imshow(opening, cmap='gray')
+    # plt.title("Morphological Opening")
+    # plt.axis('off')
+    # plt.savefig(str(folder) + "opening.jpg")
+
+    return opening
+
+def morphological_closing(img, folder):
+    
+    print("doing morphological closing...")
+    structuring_element = np.ones((5, 5), np.uint8)
+    closing = cv2.morphologyEx(img, cv2.MORPH_CLOSE, structuring_element)
+
+    # plt.figure()
+    # plt.imshow(closing, cmap='gray')
+    # plt.title("Morphological Closing")
+    # plt.axis('off')
+    # plt.savefig(str(folder) + "closing.jpg")
+
+    return closing
+
+
+def morphological_operators(binary, folder):
+    
+    print("creating filtered image...")
+    opening = morphological_opening(binary, folder)
+    closing = morphological_closing(opening, folder)
+
+    plt.figure()
+    plt.imshow(closing, cmap='gray')
+    # plt.title("Morphologically Filtered Mask")
+    plt.axis('off')
+    plt.savefig(str(folder) + "filtered.jpg")
+
+
+def overlay(enhanced, filtered, folder):
+    
+    print("overlay enhanced image and filtered image...")
+
+    enhanced = cv2.imread(cv2.samples.findFile(str(folder) + 'enhanced.jpg'))
+    filtered = cv2.imread(cv2.samples.findFile(str(folder) + 'filtered.jpg'))
+    overlay = cv2.addWeighted(enhanced, 0.5, filtered, 1.0, 0.0)
+
+    plt.figure()
+    plt.imshow(overlay, cmap='gray')
+    plt.title("Overlay")
+    plt.axis('off')
+    plt.savefig(str(folder) + "overlay.jpg")
+
+    return overlay
 
 
 def main():
-    # img_path = read_input()
-    img_path = 'input_sat_image.jpg'
-    img = load_image(img_path)
-    gray = compute_gray_value(img)
-    enhanced = image_enhancement(gray)
-    binary = binarization(enhanced)
+
+    print("\nGIVEN IMAGE\n")
+    folder_1 = "image_1/"
+    img_path_1 = str(folder_1) + 'input_sat_image.jpg'
+    img_1 = load_image(img_path_1)
+    gray_1 = compute_gray_value(img_1)
+    enhanced_1 = image_enhancement(gray_1, folder_1)
+    binary_1 = binarization(enhanced_1, folder_1)
+    filtered_1 = morphological_operators(binary_1, folder_1)
+    overlay_1 = overlay(enhanced_1, filtered_1, folder_1)
+
+    # own picture --> source: https://en.wikipedia.org/wiki/Pseudanthium
+    print("\nOWN IMAGE\n")
+    folder_2 = "image_2/"
+    img_path_2 = str(folder_2) + 'flower.jpg'
+    img_2 = load_image(img_path_2)
+    gray_2 = compute_gray_value(img_2)
+    enhanced_2 = image_enhancement(gray_2, folder_2)
+    binary_2 = binarization(enhanced_2, folder_2)
+    filtered_2 = morphological_operators(binary_2, folder_2)
+    overlay_2 = overlay(enhanced_2, filtered_2, folder_2)
 
 
 if __name__ == '__main__':
