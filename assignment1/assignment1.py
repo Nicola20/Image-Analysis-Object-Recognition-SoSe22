@@ -41,15 +41,21 @@ def compute_gray_value(img):
 def contrast_stretching(img, min_val, max_val):
     height, width = img.shape
     contrast_img = np.zeros((height, width), img.dtype)
-    outliers = 0.1 * (max_val - min_val)
+    # create a threshold for the outlier pixel
+    outliers = 0.15 * (max_val - min_val)
     high = max_val - outliers
     low = min_val + outliers
 
-    # implement here the formula for the contrast stretching - eventuell lösche outliers
+    # go through every pixel and recompute the value according to the stretching formula
     for y in range(0, height):
         for x in range(0, width):
-            streched_val = ((img[y, x] - min_val) / (max_val - min_val))
-            contrast_img[y, x] = np.uint8(streched_val * 255)
+            if img[y, x] <= low:
+                stretched_val = 0
+            elif img[y, x] >= high:
+                stretched_val = 1
+            elif low < img[y, x] < high:
+                stretched_val = ((img[y, x] - low) / (high - low))
+            contrast_img[y, x] = np.uint8(stretched_val * 255)
 
     return contrast_img
 
@@ -67,21 +73,31 @@ def image_enhancement(img):
     contrast_hist_data = contrast_img.flatten()
 
     plt.figure(1)
-    plt.subplot(1, 3, 1)
+    plt.subplot(1, 2, 1)
     plt.imshow(gray, cmap='gray')
-    plt.subplot(1, 3, 2)
-    plt.imshow(img, cmap='gray')
-    plt.subplot(1, 3, 3)
+    plt.title("Gray")
+    #plt.subplot(1, 3, 2)
+    #plt.imshow(img, cmap='gray')
+    #plt.title("Color")
+    plt.subplot(1, 2, 2)
     plt.hist(hist_data_gray, bins=(max_val-min_val))
+    plt.xlabel('Intensity Value')
+    plt.ylabel('Number of Pixels')
+    plt.savefig("grayscale.jpg")
 
     plt.figure(2)
-    plt.subplot(1, 3, 1)
-    plt.imshow(gray, cmap='gray')
-    plt.subplot(1, 3, 2)
+    #plt.subplot(1, 3, 1)
+    #plt.imshow(gray, cmap='gray')
+    #plt.title("Gray")
+    plt.subplot(1, 2, 1)
     plt.imshow(contrast_img, cmap='gray')
-    plt.subplot(1, 3, 3)
+    plt.title("Enhanced")
+    plt.subplot(1, 2, 2)
     plt.hist(contrast_hist_data, bins=(max(contrast_hist_data) - min(contrast_hist_data)))
-    plt.show()
+    plt.xlabel('Intensity Value')
+    plt.ylabel('Number of Pixels')
+    plt.savefig("enhanced.jpg")
+
 
 #def  binarization():
     # implement task 2
