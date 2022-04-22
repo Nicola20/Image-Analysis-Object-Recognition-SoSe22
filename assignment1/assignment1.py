@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """
 --------------------------------------------------------------------------------------------
-@Authors: Nicola Lea Libera (117073), Jenny Döring (119611), Josephin Kröger ()
+@Authors: Nicola Lea Libera (117073), Jenny Döring (119611), Josephin Kröger (124068)
 Description: Source code to Assignment 1 of the course Image Analysis and Object Recognition
              at Bauhaus-Universität Weimar.
 --------------------------------------------------------------------------------------------
@@ -14,8 +14,9 @@ from matplotlib import pyplot as plt
 
 def load_image(path):
     print("loading image...")
+    # reads image as colour image
     img = cv2.imread(path, cv2.IMREAD_COLOR)
-    # convert image from BGR to RGB representation
+    # convert image from BGR to RGB representation and return said picture
     img = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
     return img
 
@@ -28,6 +29,7 @@ def compute_gray_value(img):
     blue = img[:, :, 2]
 
     # convert the color channels to double so that they won't overflow and result in a false value
+    # and return the grayscale picture
     img = np.uint8(((np.float32(red) + green + blue) / 3))
     return img
 
@@ -70,7 +72,7 @@ def image_enhancement(gray, folder):
     contrast_img = contrast_stretching(gray, min_val, max_val)
     contrast_hist_data = contrast_img.flatten()
 
-    # Show the resulting images and corresponding histograms
+    # Show the resulting images and corresponding histograms and save them in the corresponding folders
     plt.figure()
     plt.subplot(1, 2, 1)
     plt.imshow(gray, cmap='gray')
@@ -107,6 +109,7 @@ def image_enhancement(gray, folder):
 
 def binarization(img, folder):
     print("creating binary mask...")
+    # split into foreground and background
     # 70 is quite a good value (2nd parameter is the threshold value)
     thresh, binary = cv2.threshold(img, 70, 255, cv2.THRESH_BINARY_INV)
     thresh = int(thresh)
@@ -123,6 +126,7 @@ def binarization(img, folder):
 def morphological_opening(img):
     # inspired by https://opencv24-python-tutorials.readthedocs.io/en/latest/py_tutorials/py_imgproc/py_morphological_ops/py_morphological_ops.html
     print("doing morphological opening...")
+    # structuring element of 5x5 was chosen
     structuring_element = np.ones((5, 5), np.uint8)
     opening = cv2.morphologyEx(img, cv2.MORPH_OPEN, structuring_element)
 
@@ -131,6 +135,7 @@ def morphological_opening(img):
 
 def morphological_closing(img):
     print("doing morphological closing...")
+    # same structuring element as opening
     structuring_element = np.ones((5, 5), np.uint8)
     closing = cv2.morphologyEx(img, cv2.MORPH_CLOSE, structuring_element)
 
@@ -151,9 +156,10 @@ def morphological_operators(binary, folder):
 
 def overlay(folder):
     print("overlay enhanced image and filtered image...")
-
+    # assign pictures which need to be overlayed
     enhanced = cv2.imread(cv2.samples.findFile(str(folder) + 'enhanced.jpg'))
     filtered = cv2.imread(cv2.samples.findFile(str(folder) + 'filtered.jpg'))
+    # add them together
     overlay = cv2.addWeighted(enhanced, 0.5, filtered, 1.0, 0.0)
 
     plt.figure()
