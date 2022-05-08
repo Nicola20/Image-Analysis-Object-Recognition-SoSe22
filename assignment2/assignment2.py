@@ -13,6 +13,9 @@ from matplotlib import pyplot as plt
 
 
 
+SIGMA = 0.5
+
+
 def load_image(path):
     print("loading image...")
     # reads image as colour image
@@ -58,12 +61,43 @@ def convolve2D(image, kernel, padding=0, strides=1):
     return output_Matrix
 
 
+def create_kernel():
+    g_y = np.zeros((5, 5), dtype=np.float32)
+    for y in range(-2, 3):
+        for x in range(-2, 3):
+            tmp1 = - (x / (2 * np.pi * SIGMA**4))
+            tmp2 = - ((x**2 + y**2) / 2 * SIGMA**2)
+            g_y[x + 2, y + 2] = tmp1 * np.exp(tmp2)
+    g_y = -(g_y)
+    g_x = np.transpose(g_y)
+
+    return g_x, g_y
+
+
 def main():
 
     print("\nGIVEN IMAGE\n")
-    img_path_1 = r'ampelmaennchen.png'
+    img_path_1 = 'ampelmaennchen.png'
     img_1 = load_image(img_path_1)
+    #height, width = img_1.shape
+    norm = np.zeros(img_1.shape, dtype=np.float32)
+    norm = np.float32(cv2.normalize(img_1, norm, 0.0, 1.0, cv2.NORM_MINMAX))
+    g_x, g_y = create_kernel()
 
+    gradient_x = cv2.filter2D(norm, -1, g_x)
+    gradient_y = cv2.filter2D(norm, -1, g_y)
+
+
+    plt.figure()
+    plt.subplot(1, 2, 1)
+    plt.imshow(gradient_x, cmap='gray')
+    plt.figure()
+    plt.subplot(1, 2, 2)
+    plt.imshow(gradient_y, cmap='gray')
+    plt.show()
+
+
+    """
     #norm the picture
     norm = np.zeros((800,800))
     norm_image = cv2.normalize(img_1,norm,0,255,cv2.NORM_MINMAX)
@@ -78,9 +112,8 @@ def main():
     plt.figure()
     plt.subplot(1, 2, 2)
     plt.imshow(img_2, cmap='gray')
-    plt.show()
+    plt.show()"""
 
-    
 
 if __name__ == '__main__':
     main()
