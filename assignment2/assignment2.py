@@ -38,6 +38,97 @@ def create_kernel():
     return g_x, g_y
 
 
+def autocorrelation_matrix(gradient_x_squared, gradient_x_y, gradient_y_squared, current_x, current_y, window_size):
+
+    weight = 1
+
+    value = window_size // 2
+
+    M = 0
+
+    for i in range(current_x - value, current_x + value):
+        for j in range(current_y - value, current_y + value):
+            M = M + weight * np.matrix([[gradient_x_squared[i, j], gradient_x_y[i, j]], [gradient_x_y[i, j], gradient_y_squared[i, j]]])
+
+    return M 
+
+
+def cornerness(M):
+
+    if (det(M) == 0 or trace(M) == 0):
+        return 0
+
+    return det(M) / trace(M)
+
+
+def roundness(M):
+
+    if (det(M) == 0 or trace(M) == 0):
+        return 0
+
+    return 4 * det(M) / (trace(M) * trace(M))
+
+
+def det(M):
+    
+    m_1 = M[0, 0]
+    m_2 = M[0, 1]
+    m_3 = M[1, 0]
+    m_4 = M[1, 1]
+
+    return m_1 * m_4 - m_2 * m_3
+
+
+def trace(M):
+
+    m_1 = M[0, 0]
+    m_4 = M[1, 1]
+
+    return m_1 + m_4
+
+
+def binary_mask(image_size):
+
+    threshold_w = 0.004
+    threshold_ = 0.5
+
+
+def foerstner(gradient_x, gradient_y, image_size):
+
+    print("foerstner...")
+    print("don't worry, it lasts some time...")
+
+    gradient_x_squared = gradient_x * gradient_x
+    gradient_x_y = gradient_x * gradient_y
+    gradient_y_squared = gradient_y * gradient_y
+
+    window_size = 5
+
+    W = np.zeros((image_size[0], image_size[1]))
+    Q = np.zeros((image_size[0], image_size[1]))
+
+    # for each pixel in the image
+    for current_x in range(0, image_size[0]-1):
+        for current_y in range(0, image_size[1]-1):
+
+            M = autocorrelation_matrix(gradient_x_squared, gradient_x_y, gradient_y_squared, current_x, current_y, window_size)
+
+            w = cornerness(M)
+            W[current_x, current_y] = w
+
+            q = roundness(M)
+            Q[current_x, current_y] = q
+
+    # plot images for cornerness and roundness with jet color mapping
+    plt.figure()
+    plt.subplot(1, 2, 1)
+    plt.imshow(W, cmap='jet')
+    plt.figure()
+    plt.subplot(1, 2, 2)
+    plt.imshow(Q, cmap='jet')
+    plt.show()
+
+
 def main():
 
     print("\nGIVEN IMAGE\n")
@@ -51,7 +142,6 @@ def main():
     gradient_x = cv2.filter2D(norm, -1, g_x)
     gradient_y = cv2.filter2D(norm, -1, g_y)
 
-
     plt.figure()
     plt.subplot(1, 2, 1)
     plt.imshow(gradient_x, cmap='gray')
@@ -59,6 +149,14 @@ def main():
     plt.subplot(1, 2, 2)
     plt.imshow(gradient_y, cmap='gray')
     plt.show()
+
+    # ***********************************************************************
+
+    image_size = [int(norm.shape[0]), int(norm.shape[1])]
+
+    foerstner(gradient_x, gradient_y, image_size)
+
+
 
 if __name__ == '__main__':
     main()
