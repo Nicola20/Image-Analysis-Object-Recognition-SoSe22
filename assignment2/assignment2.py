@@ -16,7 +16,6 @@ SIGMA = 0.5
 
 
 def load_image(path):
-    print("loading image...")
     # reads image as colour image
     img = cv2.imread(path, cv2.IMREAD_COLOR)
     # convert image from BGR to RGB representation and return said picture
@@ -24,26 +23,17 @@ def load_image(path):
     return img
 
 
-def create_mask():
-    #sobel matrix for 5x5 kernel: ('-2 -1 0 1 2; -2 -1 0 1 2; -2 -1 0 1 2; -2 -1 0 1 2; -2 -1 0 1 2')
-    sobel_x = np.zeros((5, 5), dtype=np.float32)
-    for y in range(5):
-        for x in range(5):
-            sobel_x[y, x] = x - 2
-    return sobel_x
-
-
-def create_gaussian_kernel(mask):
+def create_gaussian_kernel():
     g_x = np.zeros((5, 5), dtype=np.float32)
-    for y in range(g_x.shape[0]):
-        for x in range(g_x.shape[1]):
-            tmp1 = - (mask[y, x] / (2 * np.pi * SIGMA ** 4))
-            tmp2 = - ((mask[y, x] ** 2 + (y - 2) ** 2) / 2 * SIGMA ** 2)
+    # compute the radius of the kernel
+    radius = int(np.ceil(3 * SIGMA))
+
+    for y in range(-radius, radius + 1):
+        for x in range(-radius, radius + 1):
+            tmp1 = - (x / (2 * np.pi * SIGMA ** 4))
+            tmp2 = - ((x ** 2 + y ** 2) / 2 * SIGMA ** 2)
             g_x[y, x] = tmp1 * np.exp(tmp2)
 
-    # change the sign so that the gradient color codings match the one from
-    # the images of the assignment sheet
-    g_x = -g_x
     g_y = np.transpose(g_x)
 
     return g_x, g_y
@@ -51,7 +41,6 @@ def create_gaussian_kernel(mask):
 
 def compute_magnitude(gradient_x, gradient_y):
     mag = np.sqrt(np.add(gradient_x**2, gradient_y**2))
-    print(mag)
     return mag
 
 
@@ -144,19 +133,17 @@ def foerstner(gradient_x, gradient_y, image_size):
     plt.show()
 
 
-def main():
-
-    img_path_1 = 'ampelmaennchen.png'
-    img_1 = load_image(img_path_1)
-
-    norm = np.zeros(img_1.shape, dtype=np.float32)
+def task_1(img_path):
+    img = load_image(img_path)
+    img_name = img_path.split('.')[0]
+    orig_img = cv2.imread(img_path, cv2.IMREAD_COLOR)
+    orig_img = cv2.cvtColor(orig_img, cv2.COLOR_BGR2RGB)
+    norm = np.zeros(img.shape, dtype=np.float32)
     # normalize the input image
-    norm = np.float32(cv2.normalize(img_1, norm, 0.0, 1.0, cv2.NORM_MINMAX))
+    norm = np.float32(cv2.normalize(img, norm, 0.0, 1.0, cv2.NORM_MINMAX))
 
-    # create the sobel mask for the computation of the gradients
-    mask = create_mask()
     # use gaussian for the creation of the kernel
-    g_x, g_y = create_gaussian_kernel(mask)
+    g_x, g_y = create_gaussian_kernel()
 
     # apply the gradient filter to the normalized input image
     gradient_x = cv2.filter2D(norm, -1, g_x)
@@ -166,18 +153,31 @@ def main():
     mag = compute_magnitude(gradient_x, gradient_y)
 
     plt.figure()
-    plt.subplot(1, 3, 1)
+    plt.subplot(2, 2, 1)
+    plt.title("Original")
+    plt.imshow(orig_img)
+    plt.subplot(2, 2, 2)
     plt.title("Ix")
     plt.imshow(gradient_x, cmap='gray')
-    plt.subplot(1, 3, 2)
+    plt.subplot(2, 2, 3)
     plt.title("Iy")
     plt.imshow(gradient_y, cmap='gray')
-    plt.subplot(1, 3, 3)
+    plt.subplot(2, 2, 4)
     plt.title("Magnitude")
     plt.imshow(mag, cmap='gray')
     plt.tight_layout()
     #plt.show()
-    plt.savefig("GoG-Filtering.jpg")
+    plt.savefig("GoG-Filtering-" + img_name + ".jpg")
+
+
+def main():
+
+    img_path_1 = 'ampelmaennchen.png'
+    img_path_2 = 'flower.jpg'
+    img_path_3 = 'berlin.jpg'
+    task_1(img_path_1)
+    task_1(img_path_2)
+    task_1(img_path_3)
 
     # ---------------- Task 2 ------------------
     image_size = [int(norm.shape[0]), int(norm.shape[1])]
