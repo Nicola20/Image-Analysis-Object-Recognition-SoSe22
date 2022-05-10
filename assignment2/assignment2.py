@@ -14,7 +14,7 @@ from matplotlib import pyplot as plt
 
 SIGMA = 0.5
 
-
+#loading of the image and converting to gray
 def load_image(path):
     # reads image as colour image
     img = cv2.imread(path, cv2.IMREAD_COLOR)
@@ -22,12 +22,13 @@ def load_image(path):
     img = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
     return img
 
-
+#computation of the kernel
 def create_gaussian_kernel():
+    #5x5 matrix 
     g_x = np.zeros((5, 5), dtype=np.float32)
     # compute the radius of the kernel
     radius = int(np.ceil(3 * SIGMA))
-
+    #math formula applied and values stored in the matrix
     for y in range(-radius, radius + 1):
         for x in range(-radius, radius + 1):
             tmp1 = - (x / (2 * np.pi * SIGMA ** 4))
@@ -38,18 +39,18 @@ def create_gaussian_kernel():
 
     return g_x, g_y
 
-
+#computation of magnitude according to formula
 def compute_magnitude(gradient_x, gradient_y):
     mag = np.sqrt(np.add(gradient_x**2, gradient_y**2))
     return mag
 
-
+#autocorrelation matrix 
 def autocorrelation_matrix(gradient_x_squared, gradient_x_y, gradient_y_squared, current_x, current_y, window_size):
-
+    # weight is 1 because it is in the window
     weight = 1
     value = window_size // 2
     M = 0
-
+    #for each pixel the matrix is computed and stored
     for i in range(current_x - value, current_x + value):
         for j in range(current_y - value, current_y + value):
             M = M + weight * np.matrix([[gradient_x_squared[i, j], gradient_x_y[i, j]], [gradient_x_y[i, j],
@@ -91,7 +92,7 @@ def trace(M):
 
     return m_1 + m_4
 
-
+#binary mask with threshold
 def derive_binary_mask(img_name, image_size, W, Q, threshold_w, threshold_q):
 
     binary_mask = np.zeros((image_size[0], image_size[1]))
@@ -120,6 +121,7 @@ def foerstner(img_name, gradient_x, gradient_y, image_size):
     gradient_x_y = gradient_x * gradient_y
     gradient_y_squared = gradient_y * gradient_y
 
+    #thresholds according to task
     threshold_w = 0.004
     threshold_q = 0.5
 
