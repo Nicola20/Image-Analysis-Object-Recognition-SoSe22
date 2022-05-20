@@ -57,21 +57,44 @@ def create_gaussian_kernel(sigma):
     return g
 
 
-def plot_image(img, img_name):
+def plot_image(img, title, img_name):
 
     plt.figure()
-    plt.title("img_name")
+    plt.title(title)
     plt.imshow(img, cmap='gray')
     plt.savefig(img_name + ".jpg")
+
+
+def frequency_domain_filtering(img, kernel):
+
+    # fit the size of the kernel to the size of the image by padding it with zeros
+    kernel = np.pad(kernel, [(0, img.shape[0] - kernel.shape[0]),
+                             (0, img.shape[1] - kernel.shape[1])], mode='constant')
+
+    # apply fourier transformation to kernel and image
+    fourier_img = np.fft.fft2(img)
+    fourier_kernel = np.fft.fft2(kernel)
+
+    # multiply them elementwise
+    res_img = fourier_img * fourier_kernel
+    # apply inverse fourier to the resulting frequency domain
+    res_img = np.fft.ifft2(res_img)
+
+    # return the absolute values for the interpretation (you can't plot imaginary numbers)
+    return np.abs(res_img)
 
 
 def main():
     img_path_task1 = 'taskA.png'
     task_1_img = load_image(img_path_task1)
-    #plot_image(task_1_img, "normal")
+    # plot_image(task_1_img, "some title", "normal")
     task_1_img_noise = add_gaussian_noise(task_1_img)
-    #plot_image(task_1_img_noise, "gaussian noise")
-    gaussian_kernel = create_gaussian_kernel(0.5)
+    # plot_image(task_1_img_noise, "some title", "gaussian noise")
+    sigma = 0.5
+    gaussian_kernel = create_gaussian_kernel(sigma)
+
+    filtered_img = frequency_domain_filtering(task_1_img_noise, gaussian_kernel)
+    plot_image(np.abs(filtered_img), "Filtered Image Sigma=" + str(sigma), "filtered sigma " + str(sigma))
 
 
 if __name__ == '__main__':
