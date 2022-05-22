@@ -11,6 +11,7 @@ import numpy as np
 import cv2
 import math
 from matplotlib import pyplot as plt
+from skimage.transform import hough_line
 
 
 # loading of the image, converting to gray and normalizing it
@@ -61,6 +62,7 @@ def plot_image(img, title, img_name):
     plt.figure()
     plt.title(title)
     plt.imshow(img, cmap='gray')
+    plt.axis('off')
     plt.savefig(img_name + ".jpg")
 
 
@@ -68,6 +70,7 @@ def plot_log_centered_image(img, title, img_name):
     plt.figure()
     plt.title(title)
     plt.imshow(np.log(abs(img)), cmap='viridis')
+    plt.axis('off')
     plt.savefig(img_name + ".jpg")
 
 
@@ -95,8 +98,128 @@ def frequency_domain_filtering(img, kernel):
     res_img = np.fft.ifft2(res_img)
     return np.abs(res_img)
 
+# ----------------------- from assignment 2 -------------------------------------------
+
+# computation of the kernel
+def ass2_create_gaussian_kernel():
+    SIGMA = 0.5
+    # 5x5 matrix
+    g_x = np.zeros((5, 5), dtype=np.float32)
+    # compute the radius of the kernel
+    radius = int(np.ceil(3 * SIGMA))
+    # math formula applied and values stored in the matrix
+    for y in range(-radius, radius + 1):
+        for x in range(-radius, radius + 1):
+            tmp1 = - (x / (2 * np.pi * SIGMA ** 4))
+            tmp2 = - ((x ** 2 + y ** 2) / 2 * SIGMA ** 2)
+            g_x[y, x] = tmp1 * np.exp(tmp2)
+
+    g_y = np.transpose(g_x)
+
+    return g_x, g_y
+
+
+# computation of magnitude according to formula
+def ass2_compute_magnitude(gradient_x, gradient_y):
+    mag = np.sqrt(np.add(gradient_x**2, gradient_y**2))
+    return mag
+
+
+def ass2_gaussian_filtering(norm, img_name):
+
+    # use gaussian for the creation of the kernel
+    g_x, g_y = ass2_create_gaussian_kernel()
+
+    # apply the gradient filter to the normalized input image
+    gradient_x = cv2.filter2D(norm, -1, g_x)
+    gradient_y = cv2.filter2D(norm, -1, g_y)
+
+    # compute the magnitude image out of the two gradient images
+    mag = ass2_compute_magnitude(gradient_x, gradient_y)
+
+    return gradient_x, gradient_y, mag
+
+
+def ass2_plot_gaussian_filtering(orig_img, gradient_x, gradient_y, mag, img_name):
+
+    plt.figure()
+    plt.subplot(2, 2, 1)
+    plt.title("Original")
+    plt.imshow(orig_img)
+    plt.axis('off')
+    plt.subplot(2, 2, 2)
+    plt.title("Ix")
+    plt.imshow(gradient_x, cmap='gray')
+    plt.axis('off')
+    plt.subplot(2, 2, 3)
+    plt.title("Iy")
+    plt.imshow(gradient_y, cmap='gray')
+    plt.axis('off')
+    plt.subplot(2, 2, 4)
+    plt.title("Magnitude")
+    plt.imshow(mag, cmap='gray')
+    plt.axis('off')
+    plt.tight_layout()
+    #plt.show()
+    plt.savefig("task_2_GoG-Filtering-" + img_name + ".jpg")
+
+
+# ------------------------------------------------------------------------------------
+
+
+def binary_edge_mask(mag, threshold):
+
+    image_size = [int(mag.shape[0]), int(mag.shape[1])]
+    mask = np.zeros((image_size[0], image_size[1]))
+
+    for i in range(0, image_size[0] - 1):
+        for j in range(0, image_size[1] - 1):
+            if mag[i][j] > threshold:
+                mask[i][j] = 1
+
+    return mask
+
+
+def hough_line_detection(binary_edge_mask, gradient_x, gradient_y):
+
+    # x * cos(theta) + y*sin(theta) = rho
+    image_size = [int(binary_edge_mask.shape[0]), int(binary_edge_mask.shape[1])]
+    rho_max = np.round(np.sqrt(image_size[0]**2 + image_size[1]**2))
+
+    # hough_voting_array = np.zeros((image_size[0], image_size[1]))
+    hough_voting_array = np.zeros((int(2 * rho_max + 1), 180))
+
+    # for i in range(0, image_size[0] - 1):
+    #     for j in range(0, image_size[1] - 1):
+    #         for theta in range(0, 179):
+    #             rho = binary_edge_mask[i][j] * np.cos(theta) + binary_edge_mask[i][j] * np.sin(theta)
+    #             hough_voting_array[theta][rho] = hough_voting_array[theta][rho] + 1
+
+    for i in range(0, image_size[0] - 1):
+        for j in range(0, image_size[1] - 1):
+            if binary_edge_mask[i][j] == 1:
+
+                theta = np.round(np.arctan(gradient_x[i][j] / gradient_y[i][j]))
+                rho = np.round(i * np.cos(theta) + j * np.sin(theta))
+
+                h_theta = int(np.round(theta) + 90)
+                h_rho = int(np.round(rho) + rho_max)
+
+                hough_voting_array[h_rho][h_theta] = hough_voting_array[h_rho][h_theta] + 1
+
+    # return hough_voting_array
+
+    rho_array = np.zeros((int(rho_max * 2)))
+    theta_array = np.zeros((179))
+
+    return hough_voting_array, rho_array, theta_array
+  
 
 def main():
+
+    # ------------------------------------- TASK 1 --------------------------------------------------
+
+    print('task 1\n')
     img_path_task1 = 'taskA.png'
     task_1_img = load_image(img_path_task1)
     # plot_image(task_1_img, "some title", "normal")
@@ -107,6 +230,45 @@ def main():
 
     filtered_img = frequency_domain_filtering(task_1_img_noise, gaussian_kernel)
     plot_image(filtered_img, "Filtered Image Sigma=" + str(sigma), "filtered sigma " + str(sigma))
+
+
+    # ------------------------------------- TASK 2 --------------------------------------------------
+
+    print('task 2')
+    task_2_img_path = 'input_ex3.jpg'
+    
+    # task a
+    print('task a')
+    task_2_img = load_image(task_2_img_path)
+    plot_image(task_2_img, 'Grayscale', 'task_2_grayscale')
+    
+    # task b
+    print('task b')
+    task_2_img_name = task_2_img_path.split('.')[0]
+    task_2_gradient_x, task_2_gradient_y, task_2_mag = ass2_gaussian_filtering(task_2_img, task_2_img_name)
+    ass2_plot_gaussian_filtering(task_2_img, task_2_gradient_x, task_2_gradient_y, task_2_mag, task_2_img_name)
+    
+    # task c
+    print('task c')
+    task_2_threshold = 0.5
+    task_2_binary_edge_mask = binary_edge_mask(task_2_mag, task_2_threshold)
+    plot_image(task_2_binary_edge_mask, 
+               "Binary Edge Mask (Magnitude) - threshold = " + str(task_2_threshold), 
+               "task_2_binary_edge_mask_" + str(task_2_threshold))
+    
+    # task d
+    print('task d')
+    task_2_hough_voting_array, task_2_rho_array, task_2_theta_array = hough_line_detection(task_2_binary_edge_mask, task_2_gradient_x, task_2_gradient_y)
+    
+    # task e
+    print('task e')
+    plot_image(task_2_hough_voting_array, 'Hough Voting Array', 'task_2_hough_voting_array')
+
+    # comparison with built-in function:
+    # https://scikit-image.org/docs/dev/api/skimage.transform.html#skimage.transform.hough_line
+    built_in_hough_voting_array, angles, d = hough_line(task_2_binary_edge_mask)
+    plot_image(built_in_hough_voting_array, 'Hough Voting Array built-in', 'task_2_hough_built_in')
+    
 
 
 if __name__ == '__main__':
