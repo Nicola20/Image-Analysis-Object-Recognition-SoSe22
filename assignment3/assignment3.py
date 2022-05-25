@@ -8,6 +8,7 @@ Description: Source code to Assignment 3 of the course Image Analysis and Object
 """
 
 import numpy as np
+import sys
 import cv2
 import math
 from matplotlib import pyplot as plt
@@ -51,9 +52,9 @@ def create_gaussian_kernel(sigma):
     # math formula applied and values stored in the matrix
     for y in range(-radius, radius + 1):
         for x in range(-radius, radius + 1):
-            tmp1 = - (1 / (2 * np.pi * sigma ** 4))
-            tmp2 = - ((x ** 2 + y ** 2) / 2 * sigma ** 2)
-            g[y+radius, x+radius] = tmp1 * np.exp(tmp2)
+            tmp1 = 1 / (2 * np.pi * (sigma**2))
+            tmp2 = - ((x**2 + y**2) / (2 * (sigma**2)))
+            g[y + radius, x + radius] = tmp1 * np.exp(tmp2)
 
     return g
 
@@ -100,19 +101,20 @@ def frequency_domain_filtering(img, kernel):
 
 # ----------------------- from assignment 2 -------------------------------------------
 
+
 # computation of the kernel
 def ass2_create_gaussian_kernel():
-    SIGMA = 0.5
+    sigma = 0.5
     # 5x5 matrix
     g_x = np.zeros((5, 5), dtype=np.float32)
     # compute the radius of the kernel
-    radius = int(np.ceil(3 * SIGMA))
+    radius = int(np.ceil(3 * sigma))
     # math formula applied and values stored in the matrix
     for y in range(-radius, radius + 1):
         for x in range(-radius, radius + 1):
-            tmp1 = - (x / (2 * np.pi * SIGMA ** 4))
-            tmp2 = - ((x ** 2 + y ** 2) / 2 * SIGMA ** 2)
-            g_x[y, x] = tmp1 * np.exp(tmp2)
+            tmp1 = - (x / (2 * np.pi * sigma ** 4))
+            tmp2 = - ((x ** 2 + y ** 2) / 2 * sigma ** 2)
+            g_x[y + radius, x + radius] = tmp1 * np.exp(tmp2)
 
     g_y = np.transpose(g_x)
 
@@ -125,7 +127,7 @@ def ass2_compute_magnitude(gradient_x, gradient_y):
     return mag
 
 
-def ass2_gaussian_filtering(norm, img_name):
+def ass2_gaussian_filtering(norm):
 
     # use gaussian for the creation of the kernel
     g_x, g_y = ass2_create_gaussian_kernel()
@@ -145,7 +147,7 @@ def ass2_plot_gaussian_filtering(orig_img, gradient_x, gradient_y, mag, img_name
     plt.figure()
     plt.subplot(2, 2, 1)
     plt.title("Original")
-    plt.imshow(orig_img)
+    plt.imshow(orig_img, cmap='gray')
     plt.axis('off')
     plt.subplot(2, 2, 2)
     plt.title("Ix")
@@ -160,7 +162,6 @@ def ass2_plot_gaussian_filtering(orig_img, gradient_x, gradient_y, mag, img_name
     plt.imshow(mag, cmap='gray')
     plt.axis('off')
     plt.tight_layout()
-    #plt.show()
     plt.savefig("task_2_GoG-Filtering-" + img_name + ".jpg")
 
 
@@ -218,22 +219,21 @@ def hough_line_detection(binary_edge_mask, gradient_x, gradient_y):
 def main():
 
     # ------------------------------------- TASK 1 --------------------------------------------------
-
+    """
     print('task 1\n')
     img_path_task1 = 'taskA.png'
     task_1_img = load_image(img_path_task1)
     # plot_image(task_1_img, "some title", "normal")
     task_1_img_noise = add_gaussian_noise(task_1_img)
     # plot_image(task_1_img_noise, "some title", "gaussian noise")
-    sigma = 0.5
+    sigma = 1.0
     gaussian_kernel = create_gaussian_kernel(sigma)
 
     filtered_img = frequency_domain_filtering(task_1_img_noise, gaussian_kernel)
-    plot_image(filtered_img, "Filtered Image Sigma=" + str(sigma), "filtered sigma " + str(sigma))
-
+    plot_image(filtered_img, "Filtered Image Sigma=" + str(sigma), "filtered sigma " + str(sigma))"""
 
     # ------------------------------------- TASK 2 --------------------------------------------------
-
+    np.set_printoptions(threshold=sys.maxsize)
     print('task 2')
     task_2_img_path = 'input_ex3.jpg'
     
@@ -245,12 +245,22 @@ def main():
     # task b
     print('task b')
     task_2_img_name = task_2_img_path.split('.')[0]
-    task_2_gradient_x, task_2_gradient_y, task_2_mag = ass2_gaussian_filtering(task_2_img, task_2_img_name)
+    task_2_gradient_x, task_2_gradient_y, task_2_mag = ass2_gaussian_filtering(task_2_img)
+    #print(task_2_mag)
+
+    """
+    # Look at the histogram of the magnitude image to look for a fitting threshold
+    testi = task_2_mag.flatten()
+
+    plt.figure()
+    plt.hist(testi)
+    plt.show()"""
+
     ass2_plot_gaussian_filtering(task_2_img, task_2_gradient_x, task_2_gradient_y, task_2_mag, task_2_img_name)
     
     # task c
     print('task c')
-    task_2_threshold = 0.5
+    task_2_threshold = 15.0
     task_2_binary_edge_mask = binary_edge_mask(task_2_mag, task_2_threshold)
     plot_image(task_2_binary_edge_mask, 
                "Binary Edge Mask (Magnitude) - threshold = " + str(task_2_threshold), 
@@ -268,7 +278,6 @@ def main():
     # https://scikit-image.org/docs/dev/api/skimage.transform.html#skimage.transform.hough_line
     built_in_hough_voting_array, angles, d = hough_line(task_2_binary_edge_mask)
     plot_image(built_in_hough_voting_array, 'Hough Voting Array built-in', 'task_2_hough_built_in')
-    
 
 
 if __name__ == '__main__':
