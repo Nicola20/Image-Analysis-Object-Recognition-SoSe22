@@ -17,19 +17,19 @@ from skimage.transform import hough_line
 
 # # OLD VERSION
 # # loading of the image, converting to gray and normalizing it
-# def load_image(path):
-#     # reads image as colour image
-#     img = cv2.imread(path, cv2.IMREAD_COLOR)
+def load_image_try(path):
+    # reads image as colour image
+    img = cv2.imread(path, cv2.IMREAD_COLOR)
 
-#     # convert image from BGR to RGB representation and return said picture
-#     img = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
+    # convert image from BGR to RGB representation and return said picture
+    img = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
 
-#     # normalize the image
-#     norm = np.zeros(img.shape, dtype=np.float32)
-#     # normalize the input image
-#     norm = np.float32(cv2.normalize(img, norm, 0.0, 1.0, cv2.NORM_MINMAX))
+    # normalize the image
+    norm = np.zeros(img.shape, dtype=np.float32)
+    # normalize the input image
+    norm = np.float32(cv2.normalize(img, norm, 0.0, 1.0, cv2.NORM_MINMAX))
 
-#     return norm
+    return norm
 
 
 # CORRECTED (?) VERSION
@@ -37,8 +37,8 @@ from skimage.transform import hough_line
 def load_image(path):
   
     img = cv2.imread(path, cv2.IMREAD_GRAYSCALE)
-    norm = img / np.max(img)
-
+    norm = np.float32(img / np.max(img))
+    #print(type(norm[0][0]))
     return norm
 
 
@@ -67,7 +67,7 @@ def create_gaussian_kernel(sigma):
             tmp2 = - ((x**2 + y**2) / (2 * (sigma**2)))
             g[y + radius, x + radius] = tmp1 * np.exp(tmp2)
 
-    return g
+    return g, radius
 
 
 def plot_image(img, title, img_name):
@@ -86,11 +86,18 @@ def plot_log_centered_image(img, title, img_name):
     plt.savefig(img_name + ".jpg")
 
 
-def frequency_domain_filtering(img, kernel):
-
+def frequency_domain_filtering(img, kernel, radius):
+    #plt.figure()
+    #plt.imshow(kernel, cmap='gray')
+    #plt.show()
     # fit the size of the kernel to the size of the image by padding it with zeros
     kernel = np.pad(kernel, [(0, img.shape[0] - kernel.shape[0]),
                              (0, img.shape[1] - kernel.shape[1])], mode='constant')
+    kernel = np.roll(kernel, [-radius, -radius], axis=(0, 1))
+
+    #plt.figure()
+    #plt.imshow(kernel, cmap='gray')
+    #plt.show()
 
     # apply fourier transformation to kernel and image
     fourier_img = np.fft.fft2(img)
@@ -219,20 +226,21 @@ def hough_line_detection(binary_edge_mask, gradient_x, gradient_y):
 def main():
 
     # ------------------------------------- TASK 1 --------------------------------------------------
-    """
+
     print('task 1\n')
     img_path_task1 = 'taskA.png'
     task_1_img = load_image(img_path_task1)
     # plot_image(task_1_img, "some title", "normal")
     task_1_img_noise = add_gaussian_noise(task_1_img)
-    # plot_image(task_1_img_noise, "some title", "gaussian noise")
-    sigma = 1.0
-    gaussian_kernel = create_gaussian_kernel(sigma)
+    plot_image(task_1_img_noise, "some title", "gaussian noise")
+    sigma = 2.0
+    gaussian_kernel, radius = create_gaussian_kernel(sigma)
 
-    filtered_img = frequency_domain_filtering(task_1_img_noise, gaussian_kernel)
-    plot_image(filtered_img, "Filtered Image Sigma=" + str(sigma), "filtered sigma " + str(sigma))"""
+    filtered_img = frequency_domain_filtering(task_1_img_noise, gaussian_kernel, radius)
+    plot_image(filtered_img, "Filtered Image Sigma=" + str(sigma), "filtered sigma " + str(sigma))
 
     # ------------------------------------- TASK 2 --------------------------------------------------
+    """
     np.set_printoptions(threshold=sys.maxsize)
     print('task 2')
     task_2_img_path = 'input_ex3.jpg'
@@ -246,7 +254,7 @@ def main():
     print('task b')
     task_2_img_name = task_2_img_path.split('.')[0]
     task_2_gradient_x, task_2_gradient_y, task_2_mag = ass2_gaussian_filtering(task_2_img)
-    #print(task_2_mag)
+    #print(task_2_mag)"""
 
     """
     # Look at the histogram of the magnitude image to look for a fitting threshold
@@ -258,7 +266,7 @@ def main():
     plt.savefig("task_2_magnitude_histogram" +  ".jpg")
     plt.show()
     """
-
+    """
     ass2_plot_gaussian_filtering(task_2_img, task_2_gradient_x, task_2_gradient_y, task_2_mag, task_2_img_name)
     
     # task c
@@ -285,16 +293,21 @@ def main():
     plot_image(built_in_hough_voting_array, 'Hough Voting Array built-in', 'task_2_hough_built_in')
 
     # ------------------------------------- TASK 3 --------------------------------------------------
-
+    """
     print('\ntask 3')
     task_3_img_path = 'trainB.png'
     
     # task a 
     print('task a')
-    task_3_img = load_image(task_3_img_path)
+    task_3_img = load_image_try(task_3_img_path)
     plot_image(task_3_img, 'Grayscale', 'task_3_grayscale')
+    #task_3_img, thresh = cv2.threshold(task_3_img, 0.0, 1.0, cv2.THRESH_BINARY + cv2.THRESH_OTSU)
+    #task_3_img =
+    #print(len(task_3_img))
+    thresh, task_3_img = cv2.threshold(task_3_img.astype("uint8"), 0.0, 1.0, cv2.THRESH_BINARY | cv2.THRESH_OTSU)
+    task_3_img = np.float32(task_3_img)
+    plot_image(task_3_img, 'Binary Mask', 'task_3_binary')
 
-    
 
 if __name__ == '__main__':
     main()
