@@ -15,18 +15,29 @@ from matplotlib import pyplot as plt
 from skimage.transform import hough_line
 
 
+# # OLD VERSION
+# # loading of the image, converting to gray and normalizing it
+# def load_image(path):
+#     # reads image as colour image
+#     img = cv2.imread(path, cv2.IMREAD_COLOR)
+
+#     # convert image from BGR to RGB representation and return said picture
+#     img = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
+
+#     # normalize the image
+#     norm = np.zeros(img.shape, dtype=np.float32)
+#     # normalize the input image
+#     norm = np.float32(cv2.normalize(img, norm, 0.0, 1.0, cv2.NORM_MINMAX))
+
+#     return norm
+
+
+# CORRECTED (?) VERSION
 # loading of the image, converting to gray and normalizing it
 def load_image(path):
-    # reads image as colour image
-    img = cv2.imread(path, cv2.IMREAD_COLOR)
-
-    # convert image from BGR to RGB representation and return said picture
-    img = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
-
-    # normalize the image
-    norm = np.zeros(img.shape, dtype=np.float32)
-    # normalize the input image
-    norm = np.float32(cv2.normalize(img, norm, 0.0, 1.0, cv2.NORM_MINMAX))
+  
+    img = cv2.imread(path, cv2.IMREAD_GRAYSCALE)
+    norm = img / np.max(img)
 
     return norm
 
@@ -183,34 +194,23 @@ def binary_edge_mask(mag, threshold):
 
 def hough_line_detection(binary_edge_mask, gradient_x, gradient_y):
 
-    # x * cos(theta) + y*sin(theta) = rho
     image_size = [int(binary_edge_mask.shape[0]), int(binary_edge_mask.shape[1])]
-    rho_max = np.round(np.sqrt(image_size[0]**2 + image_size[1]**2))
+    d = int(np.sqrt(image_size[0]**2 + image_size[1]**2))
+    hough_voting_array = np.zeros((181, int(2 * d + 1)))
 
-    # hough_voting_array = np.zeros((image_size[0], image_size[1]))
-    hough_voting_array = np.zeros((int(2 * rho_max + 1), 180))
-
-    # for i in range(0, image_size[0] - 1):
-    #     for j in range(0, image_size[1] - 1):
-    #         for theta in range(0, 179):
-    #             rho = binary_edge_mask[i][j] * np.cos(theta) + binary_edge_mask[i][j] * np.sin(theta)
-    #             hough_voting_array[theta][rho] = hough_voting_array[theta][rho] + 1
+    thetas = np.degrees(np.arctan2(gradient_y, gradient_x))
 
     for i in range(0, image_size[0] - 1):
         for j in range(0, image_size[1] - 1):
             if binary_edge_mask[i][j] == 1:
+                
+                # theta = int(np.arctan(gradient_y[i][j] / gradient_x[i][j]))
+                theta = int(thetas[i][j])
+                rho = int(i * np.cos(theta) + j * np.sin(theta)) + d
 
-                theta = np.round(np.arctan(gradient_x[i][j] / gradient_y[i][j]))
-                rho = np.round(i * np.cos(theta) + j * np.sin(theta))
+                hough_voting_array[theta][rho] += 1
 
-                h_theta = int(np.round(theta) + 90)
-                h_rho = int(np.round(rho) + rho_max)
-
-                hough_voting_array[h_rho][h_theta] = hough_voting_array[h_rho][h_theta] + 1
-
-    # return hough_voting_array
-
-    rho_array = np.zeros((int(rho_max * 2)))
+    rho_array = np.zeros((int(d * 2)))
     theta_array = np.zeros((179))
 
     return hough_voting_array, rho_array, theta_array
@@ -254,13 +254,16 @@ def main():
 
     plt.figure()
     plt.hist(testi)
-    plt.show()"""
+    plt.title("Histogram of Magnitude")
+    plt.savefig("task_2_magnitude_histogram" +  ".jpg")
+    plt.show()
+    """
 
     ass2_plot_gaussian_filtering(task_2_img, task_2_gradient_x, task_2_gradient_y, task_2_mag, task_2_img_name)
     
     # task c
     print('task c')
-    task_2_threshold = 15.0
+    task_2_threshold = 0.5
     task_2_binary_edge_mask = binary_edge_mask(task_2_mag, task_2_threshold)
     plot_image(task_2_binary_edge_mask, 
                "Binary Edge Mask (Magnitude) - threshold = " + str(task_2_threshold), 
@@ -269,7 +272,9 @@ def main():
     # task d
     print('task d')
     task_2_hough_voting_array, task_2_rho_array, task_2_theta_array = hough_line_detection(task_2_binary_edge_mask, task_2_gradient_x, task_2_gradient_y)
-    
+    # print(task_2_hough_voting_array)
+
+
     # task e
     print('task e')
     plot_image(task_2_hough_voting_array, 'Hough Voting Array', 'task_2_hough_voting_array')
@@ -279,6 +284,17 @@ def main():
     built_in_hough_voting_array, angles, d = hough_line(task_2_binary_edge_mask)
     plot_image(built_in_hough_voting_array, 'Hough Voting Array built-in', 'task_2_hough_built_in')
 
+    # ------------------------------------- TASK 3 --------------------------------------------------
+
+    print('\ntask 3')
+    task_3_img_path = 'trainB.png'
+    
+    # task a 
+    print('task a')
+    task_3_img = load_image(task_3_img_path)
+    plot_image(task_3_img, 'Grayscale', 'task_3_grayscale')
+
+    
 
 if __name__ == '__main__':
     main()
