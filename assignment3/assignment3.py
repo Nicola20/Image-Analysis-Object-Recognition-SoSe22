@@ -12,7 +12,9 @@ import sys
 import cv2
 import math
 from matplotlib import pyplot as plt
-from skimage.transform import hough_line
+from skimage.transform import hough_line, hough_line_peaks
+import peakutils
+from peakutils.plot import plot as pplot
 
 
 # # OLD VERSION
@@ -201,24 +203,34 @@ def binary_edge_mask(mag, threshold):
 
 def hough_line_detection(binary_edge_mask, gradient_x, gradient_y):
 
-    image_size = [int(binary_edge_mask.shape[0]), int(binary_edge_mask.shape[1])]
-    d = int(np.sqrt(image_size[0]**2 + image_size[1]**2))
-    hough_voting_array = np.zeros((181, int(2 * d + 1)))
+    image_size = [binary_edge_mask.shape[0], binary_edge_mask.shape[1]]
+    # d = sqrt(w^2 + h^2)
+    d = np.ceil(np.sqrt(image_size[0]**2 + image_size[1]**2))
 
-    thetas = np.degrees(np.arctan2(gradient_y, gradient_x))
+    # set ranges of theta and rho arrays
+    theta_array = np.arange(-90, 90)
+    rho_array = np.arange(-d, d + 1)
 
-    for i in range(0, image_size[0] - 1):
-        for j in range(0, image_size[1] - 1):
+    # H(0...179, -d...d)
+    hough_voting_array = np.zeros((len(rho_array), len(theta_array)))
+
+    # np.ceil rounds up 
+    thetas = np.ceil(np.arctan2(gradient_y, gradient_x))
+
+    for i in range(0, image_size[0]):
+        for j in range(0, image_size[1]):
             if binary_edge_mask[i][j] == 1:
-                
-                # theta = int(np.arctan(gradient_y[i][j] / gradient_x[i][j]))
-                theta = int(thetas[i][j])
-                rho = int(i * np.cos(theta) + j * np.sin(theta)) + d
+            
+                # np.cos and np.sin needs radiants as input
+                rho = np.ceil(i * np.cos(np.deg2rad(thetas[i, j])) + j * np.sin(np.deg2rad(thetas[i, j])))
 
-                hough_voting_array[theta][rho] += 1
+                # getting the index, where theta can be found in the theta_array with range (-90, 89)
+                index_theta = np.where(theta_array == thetas[i, j])
+                # getting the index, where rho can be found in the rho_array with range (-d, d)
+                index_rho = np.where(rho_array == rho)
 
-    rho_array = np.zeros((int(d * 2)))
-    theta_array = np.zeros((179))
+                # update hough voting array
+                hough_voting_array[index_rho, index_theta] += 1
 
     return hough_voting_array, rho_array, theta_array
 
@@ -249,7 +261,7 @@ def main():
     plot_image(filtered_img, "Filtered Image Sigma=" + str(sigma), "filtered sigma " + str(sigma))
 
     # ------------------------------------- TASK 2 --------------------------------------------------
-    """
+    
     np.set_printoptions(threshold=sys.maxsize)
     print('task 2')
     task_2_img_path = 'input_ex3.jpg'
@@ -263,7 +275,7 @@ def main():
     print('task b')
     task_2_img_name = task_2_img_path.split('.')[0]
     task_2_gradient_x, task_2_gradient_y, task_2_mag = ass2_gaussian_filtering(task_2_img)
-    #print(task_2_mag)"""
+    #print(task_2_mag)
 
     """
     # Look at the histogram of the magnitude image to look for a fitting threshold
@@ -275,7 +287,7 @@ def main():
     plt.savefig("task_2_magnitude_histogram" +  ".jpg")
     plt.show()
     """
-    """
+    
     ass2_plot_gaussian_filtering(task_2_img, task_2_gradient_x, task_2_gradient_y, task_2_mag, task_2_img_name)
     
     # task c
@@ -301,8 +313,34 @@ def main():
     built_in_hough_voting_array, angles, d = hough_line(task_2_binary_edge_mask)
     plot_image(built_in_hough_voting_array, 'Hough Voting Array built-in', 'task_2_hough_built_in')
 
-    # ------------------------------------- TASK 3 --------------------------------------------------
     """
+
+    # task f
+    print('task f')
+    built_in_hough_peaks, angles, dists = hough_line_peaks(built_in_hough_voting_array, angles, d)
+    # print(built_in_hough_peaks)
+    # print(angles)
+    # print(dists)
+
+    # task g
+    print('task g')
+
+    indexes = peakutils.indexes(dists, 0, 0)
+    plt.figure()
+    pplot(built_in_hough_peaks, dists, indexes)
+    plt.savefig('task_2_peaks' + ".jpg")
+    # plt.show()
+
+    # task h
+    print('task h')
+    lines = cv2.HoughLines(task_2_binary_edge_mask, 1, math.pi/180, task_2_threshold.astype(np.uint8))
+
+    # plot_image(lines, 'Hough Lines built-in', 'task_2_hough_lines_built_in')
+
+    """
+    
+    # ------------------------------------- TASK 3 --------------------------------------------------
+    
     print('\ntask 3')
     task_3_img_path = 'trainB.png'
     
@@ -310,8 +348,11 @@ def main():
     print('task a')
     task_3_img = load_image_try(task_3_img_path)
     plot_image(task_3_img, 'Grayscale', 'task_3_grayscale')
+
+    # task b + c
+    print('task b + c')
     fourier_descriptor(task_3_img)
-    #plot_image(task_3_img, 'Binary Mask', 'task_3_binary')
+    # plot_image(task_3_img, 'Binary Mask', 'task_3_binary')
 
 
 if __name__ == '__main__':
