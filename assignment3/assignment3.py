@@ -221,12 +221,21 @@ def hough_line_detection(binary_edge_mask, gradient_x, gradient_y):
     theta_array = np.zeros((179))
 
     return hough_voting_array, rho_array, theta_array
-  
+
+
+# ----------------------------------------- TASK 3 --------------------------------------------------
+def fourier_descriptor(img):
+    # find a threshold for the image with otsu method and apply it to th eimage to get a binary mask
+    thresh, img = cv2.threshold(img.astype("uint8"), 0.0, 1.0, cv2.THRESH_BINARY | cv2.THRESH_OTSU)
+    #img = np.float32(img)
+    contours, hierarchy = cv2.findContours(img, cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE)
+    #img_contours = np.zeros(img.shape)
+    #img_contours = cv2.drawContours(img_contours, contours, -1, (128, 255, 0), 3)
+    #cv2.imwrite('contours.png', img_contours)
+
 
 def main():
-
     # ------------------------------------- TASK 1 --------------------------------------------------
-
     print('task 1\n')
     img_path_task1 = 'taskA.png'
     task_1_img = load_image(img_path_task1)
@@ -301,12 +310,8 @@ def main():
     print('task a')
     task_3_img = load_image_try(task_3_img_path)
     plot_image(task_3_img, 'Grayscale', 'task_3_grayscale')
-    #task_3_img, thresh = cv2.threshold(task_3_img, 0.0, 1.0, cv2.THRESH_BINARY + cv2.THRESH_OTSU)
-    #task_3_img =
-    #print(len(task_3_img))
-    thresh, task_3_img = cv2.threshold(task_3_img.astype("uint8"), 0.0, 1.0, cv2.THRESH_BINARY | cv2.THRESH_OTSU)
-    task_3_img = np.float32(task_3_img)
-    plot_image(task_3_img, 'Binary Mask', 'task_3_binary')
+    fourier_descriptor(task_3_img)
+    #plot_image(task_3_img, 'Binary Mask', 'task_3_binary')
 
 
 if __name__ == '__main__':
