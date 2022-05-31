@@ -277,16 +277,13 @@ def main():
     task_2_gradient_x, task_2_gradient_y, task_2_mag = ass2_gaussian_filtering(task_2_img)
     #print(task_2_mag)
 
-    """
     # Look at the histogram of the magnitude image to look for a fitting threshold
-    testi = task_2_mag.flatten()
+    task_2_mag_hist = task_2_mag.flatten()
 
     plt.figure()
-    plt.hist(testi)
+    plt.hist(task_2_mag_hist)
     plt.title("Histogram of Magnitude")
     plt.savefig("task_2_magnitude_histogram" +  ".jpg")
-    plt.show()
-    """
     
     ass2_plot_gaussian_filtering(task_2_img, task_2_gradient_x, task_2_gradient_y, task_2_mag, task_2_img_name)
     
@@ -313,31 +310,64 @@ def main():
     built_in_hough_voting_array, angles, d = hough_line(task_2_binary_edge_mask)
     plot_image(built_in_hough_voting_array, 'Hough Voting Array built-in', 'task_2_hough_built_in')
 
-    """
+    # We used for the tasks 2f-i the results for the hough voting array from the built in function, 
+    # because of probably existing issues with the gaussian filtering from assignment 2 and caused 
+    # from that a wrong hough voting array in 2d).
 
     # task f
     print('task f')
     built_in_hough_peaks, angles, dists = hough_line_peaks(built_in_hough_voting_array, angles, d)
-    # print(built_in_hough_peaks)
-    # print(angles)
-    # print(dists)
+
 
     # task g
     print('task g')
+    temp = cv2.imread('input_ex3.jpg')
+
+    # source: https://peakutils.readthedocs.io/en/latest/tutorial_a.html
 
     indexes = peakutils.indexes(dists, 0, 0)
+    # print(indexes)
     plt.figure()
     pplot(built_in_hough_peaks, dists, indexes)
-    plt.savefig('task_2_peaks' + ".jpg")
+    plt.savefig('task_2_hough_peaks_diagram' + ".jpg")
     # plt.show()
+
+    for i in range(0, len(indexes)):
+
+        cv2.circle(temp, (built_in_hough_peaks[indexes[i]], int(dists[indexes[i]])), 0, (255,0,0), 3)
+
+    cv2.imwrite('task_2_hough_peaks.jpg', temp)
+
 
     # task h
     print('task h')
-    lines = cv2.HoughLines(task_2_binary_edge_mask, 1, math.pi/180, task_2_threshold.astype(np.uint8))
+    lines = cv2.HoughLines(task_2_binary_edge_mask.astype("uint8"), 1, math.pi/180, 260)
 
-    # plot_image(lines, 'Hough Lines built-in', 'task_2_hough_lines_built_in')
 
-    """
+    # task i
+    print('task i')
+
+    # inspired by https://docs.opencv.org/4.x/d9/db0/tutorial_hough_lines.html
+
+    for i in range(0, len(lines)): 
+
+        rho = lines[i][0][0]
+        theta = lines[i][0][1]
+        a = math.cos(theta)
+        b = math.sin(theta)
+        x_0 = a * rho
+        y_0 = b * rho
+        x_1 = int(x_0 + 1000 * (-b))
+        y_1 = int(y_0 + 1000 * (a))
+        x_2 = int(x_0 - 1000 * (-b))
+        y_2 = int(y_0 - 1000 * (a))
+        point_1 = (x_1, y_1)
+        point_2 = (x_2, y_2)
+
+        cv2.line(temp, point_1, point_2, (255, 0, 0), 1)
+
+    cv2.imwrite('task_2_hough_lines.jpg', temp)
+    
     
     # ------------------------------------- TASK 3 --------------------------------------------------
     
