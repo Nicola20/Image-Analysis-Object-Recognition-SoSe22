@@ -19,12 +19,12 @@ from peakutils.plot import plot as pplot
 # number of points for the fourier descriptor in task 3
 N = 24
 
+
 # loading of the image, converting to gray and normalizing it
 def load_image(path):
-  
     img = cv2.imread(path, cv2.IMREAD_GRAYSCALE)
     norm = np.float32(img / np.max(img))
-    #print(type(norm[0][0]))
+
     return norm
 
 
@@ -278,7 +278,6 @@ def main():
     print('task 1\n')
     img_path_task1 = 'taskA.png'
     task_1_img = load_image(img_path_task1)
-    # plot_image(task_1_img, "some title", "normal")
     task_1_img_noise = add_gaussian_noise(task_1_img)
     plot_image(task_1_img_noise, "some title", "gaussian noise")
     sigma = 1.0
@@ -302,7 +301,6 @@ def main():
     print('task b')
     task_2_img_name = task_2_img_path.split('.')[0]
     task_2_gradient_x, task_2_gradient_y, task_2_mag = ass2_gaussian_filtering(task_2_img)
-    #print(task_2_mag)
 
     # Look at the histogram of the magnitude image to look for a fitting threshold
     task_2_mag_hist = task_2_mag.flatten()
@@ -324,9 +322,9 @@ def main():
     
     # task d
     print('task d')
-    task_2_hough_voting_array, task_2_rho_array, task_2_theta_array = hough_line_detection(task_2_binary_edge_mask, task_2_gradient_x, task_2_gradient_y)
-    # print(task_2_hough_voting_array)
-
+    task_2_hough_voting_array, task_2_rho_array, task_2_theta_array = hough_line_detection(task_2_binary_edge_mask,
+                                                                                           task_2_gradient_x,
+                                                                                           task_2_gradient_y)
 
     # task e
     print('task e')
@@ -345,37 +343,29 @@ def main():
     print('task f')
     built_in_hough_peaks, angles, dists = hough_line_peaks(built_in_hough_voting_array, angles, d)
 
-
     # task g
     print('task g')
     temp = cv2.imread('input_ex3.jpg')
 
     # source: https://peakutils.readthedocs.io/en/latest/tutorial_a.html
-
     indexes = peakutils.indexes(dists, 0, 0)
-    # print(indexes)
     plt.figure()
     pplot(built_in_hough_peaks, dists, indexes)
     plt.savefig('task_2_hough_peaks_diagram' + ".jpg")
-    # plt.show()
 
     for i in range(0, len(indexes)):
-
         cv2.circle(temp, (built_in_hough_peaks[indexes[i]], int(dists[indexes[i]])), 0, (255,0,0), 3)
 
     cv2.imwrite('task_2_hough_peaks.jpg', temp)
-
 
     # task h
     print('task h')
     lines = cv2.HoughLines(task_2_binary_edge_mask.astype("uint8"), 1, math.pi/180, 260)
 
-
     # task i
     print('task i')
 
     # inspired by https://docs.opencv.org/4.x/d9/db0/tutorial_hough_lines.html
-
     for i in range(0, len(lines)): 
 
         rho = lines[i][0][0]
@@ -394,8 +384,7 @@ def main():
         cv2.line(temp, point_1, point_2, (255, 0, 0), 1)
 
     cv2.imwrite('task_2_hough_lines.jpg', temp)
-    
-    
+
     # ------------------------------------- TASK 3 --------------------------------------------------
     
     print('\ntask 3')
@@ -407,12 +396,12 @@ def main():
     df_1b, contours_1b = fourier_descriptor(test_1b_img, 0.25)
     df_2b, contours_2b = fourier_descriptor(test_2b_img, 0.35)
     df_3b, contours_3b = fourier_descriptor(test_3b_img, 0.2)
-    check_for_similarity(df_train, df_1b, contours_1b, 
-        cv2.imread('test1B.jpg', cv2.IMREAD_COLOR), "test1B_result.jpg")
-    check_for_similarity(df_train, df_2b, contours_2b, 
-        cv2.imread('test2B.jpg', cv2.IMREAD_COLOR), "test2B_result.jpg")
-    check_for_similarity(df_train, df_3b, contours_3b, 
-        cv2.imread('test3B.jpg', cv2.IMREAD_COLOR), "test3B_result.jpg")
+    check_for_similarity(df_train, df_1b, contours_1b,
+                         cv2.imread('test1B.jpg', cv2.IMREAD_COLOR), "test1B_result.jpg")
+    check_for_similarity(df_train, df_2b, contours_2b,
+                         cv2.imread('test2B.jpg', cv2.IMREAD_COLOR), "test2B_result.jpg")
+    check_for_similarity(df_train, df_3b, contours_3b,
+                         cv2.imread('test3B.jpg', cv2.IMREAD_COLOR), "test3B_result.jpg")
 
 
 if __name__ == '__main__':
