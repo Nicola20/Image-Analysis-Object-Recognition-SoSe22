@@ -16,25 +16,9 @@ from skimage.transform import hough_line, hough_line_peaks
 import peakutils
 from peakutils.plot import plot as pplot
 
+# number of points for the fourier descriptor in task 3
+N = 24
 
-# # OLD VERSION
-# # loading of the image, converting to gray and normalizing it
-def load_image_try(path):
-    # reads image as colour image
-    img = cv2.imread(path, cv2.IMREAD_COLOR)
-
-    # convert image from BGR to RGB representation and return said picture
-    img = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
-
-    # normalize the image
-    norm = np.zeros(img.shape, dtype=np.float32)
-    # normalize the input image
-    norm = np.float32(cv2.normalize(img, norm, 0.0, 1.0, cv2.NORM_MINMAX))
-
-    return norm
-
-
-# CORRECTED (?) VERSION
 # loading of the image, converting to gray and normalizing it
 def load_image(path):
   
@@ -88,18 +72,14 @@ def plot_log_centered_image(img, title, img_name):
     plt.savefig(img_name + ".jpg")
 
 
-def frequency_domain_filtering(img, kernel, radius):
-    #plt.figure()
-    #plt.imshow(kernel, cmap='gray')
-    #plt.show()
+def frequency_domain_filtering(img, kernel, radius, sigma):
+
     # fit the size of the kernel to the size of the image by padding it with zeros
     kernel = np.pad(kernel, [(0, img.shape[0] - kernel.shape[0]),
                              (0, img.shape[1] - kernel.shape[1])], mode='constant')
-    kernel = np.roll(kernel, [-radius, -radius], axis=(0, 1))
 
-    #plt.figure()
-    #plt.imshow(kernel, cmap='gray')
-    #plt.show()
+    # center the center of the kernel at the upper left corner
+    kernel = np.roll(kernel, [-radius, -radius], axis=(0, 1))
 
     # apply fourier transformation to kernel and image
     fourier_img = np.fft.fft2(img)
@@ -108,12 +88,12 @@ def frequency_domain_filtering(img, kernel, radius):
 
     fourier_kernel = np.fft.fft2(kernel)
     shifted_kernel = np.fft.fftshift(fourier_kernel)
-    plot_log_centered_image(shifted_kernel, "Gaussian Filter", "gaussian filter log")
+    plot_log_centered_image(shifted_kernel, "Gaussian Filter", "gaussian filter log sigma " + str(sigma))
 
     # multiply them elementwise
     res_img = fourier_img * fourier_kernel
     res_img_shifted = np.fft.fftshift(res_img)
-    plot_log_centered_image(res_img_shifted, "Filtered Image", "filtered noisy log")
+    plot_log_centered_image(res_img_shifted, "Filtered Image", "filtered noisy log sigma " + str(sigma))
 
     # apply inverse fourier to the resulting frequency domain
     res_img = np.fft.ifft2(res_img)
@@ -236,14 +216,61 @@ def hough_line_detection(binary_edge_mask, gradient_x, gradient_y):
 
 
 # ----------------------------------------- TASK 3 --------------------------------------------------
-def fourier_descriptor(img):
-    # find a threshold for the image with otsu method and apply it to th eimage to get a binary mask
-    thresh, img = cv2.threshold(img.astype("uint8"), 0.0, 1.0, cv2.THRESH_BINARY | cv2.THRESH_OTSU)
-    #img = np.float32(img)
-    contours, hierarchy = cv2.findContours(img, cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE)
-    #img_contours = np.zeros(img.shape)
-    #img_contours = cv2.drawContours(img_contours, contours, -1, (128, 255, 0), 3)
-    #cv2.imwrite('contours.png', img_contours)
+def fourier_descriptor(img, threshold):
+    # create a binary mask with a fitting threshold
+    thresh, binary = cv2.threshold(img, threshold, 1.0, cv2.THRESH_BINARY)
+
+    # extract the contours of different objects
+    contours, hierarchy = cv2.findContours(binary.astype("uint8"), cv2.RETR_LIST, cv2.CHAIN_APPROX_NONE)
+
+    # create the fourier descriptor for each image
+    df = create_fourier_descriptor(contours)
+    return df, contours
+
+
+def check_for_similarity(df1, df2, boundaries, img, img_name):
+    counter = 0
+    for entry in df2:
+        # check how similar the two descriptor are.
+        # If they are very similar then they are likely to be the same object
+        if np.linalg.norm(df1 - entry) < 0.06:
+            # draw the contours of the object that is similar to our model (df1)
+            cv2.drawContours(img, boundaries, counter, (255, 255, 255), 2)
+            cv2.imwrite(img_name, img)
+        counter += 1
+
+
+def create_fourier_descriptor(contours):
+    # if more than one object (contour) was detected
+    if len(contours) > 1:
+        # create a descriptor whre the number of rows is equal to the number of detected boundaries (objects)
+        descriptor = np.zeros((len(contours), N))
+
+        counter = 0
+        for entry in contours:
+            if len(entry) > N:
+                mod_entry = np.array(entry)[:, 0]
+                # convert the point pairs to complex numbers
+                df = mod_entry[:, 1] + 1j * mod_entry[:, 0]
+                # apply the 1 dim fourier transformation
+                df = np.fft.fft(df)
+
+                # make the descriptor invariant to translation, scaling and orientation
+                df = abs(df[1:N + 1] / abs(df[1]))
+                descriptor[counter, :] = df
+            else:
+                # if the number of boundary points is smaller than our N, save them as all zeros
+                descriptor[counter, :] = np.zeros((1, N))
+            counter += 1
+    else:
+        # if just one contour was found
+        contours = np.array(contours[0])[:, 0]
+        df = contours[:, 1] + 1j * contours[:, 0]
+        df = np.fft.fft(df)
+        df = abs(df[1:N + 1] / abs(df[1]))
+        descriptor = df
+
+    return descriptor
 
 
 def main():
@@ -254,10 +281,10 @@ def main():
     # plot_image(task_1_img, "some title", "normal")
     task_1_img_noise = add_gaussian_noise(task_1_img)
     plot_image(task_1_img_noise, "some title", "gaussian noise")
-    sigma = 2.0
+    sigma = 1.0
     gaussian_kernel, radius = create_gaussian_kernel(sigma)
 
-    filtered_img = frequency_domain_filtering(task_1_img_noise, gaussian_kernel, radius)
+    filtered_img = frequency_domain_filtering(task_1_img_noise, gaussian_kernel, radius, sigma)
     plot_image(filtered_img, "Filtered Image Sigma=" + str(sigma), "filtered sigma " + str(sigma))
 
     # ------------------------------------- TASK 2 --------------------------------------------------
@@ -372,17 +399,20 @@ def main():
     # ------------------------------------- TASK 3 --------------------------------------------------
     
     print('\ntask 3')
-    task_3_img_path = 'trainB.png'
-    
-    # task a 
-    print('task a')
-    task_3_img = load_image_try(task_3_img_path)
-    plot_image(task_3_img, 'Grayscale', 'task_3_grayscale')
-
-    # task b + c
-    print('task b + c')
-    fourier_descriptor(task_3_img)
-    # plot_image(task_3_img, 'Binary Mask', 'task_3_binary')
+    task_3_train_img = load_image('trainB.png')
+    test_1b_img = load_image('test1B.jpg')
+    test_2b_img = load_image('test2B.jpg')
+    test_3b_img = load_image('test3B.jpg')
+    df_train, contours_train = fourier_descriptor(task_3_train_img, 0.5)
+    df_1b, contours_1b = fourier_descriptor(test_1b_img, 0.25)
+    df_2b, contours_2b = fourier_descriptor(test_2b_img, 0.35)
+    df_3b, contours_3b = fourier_descriptor(test_3b_img, 0.2)
+    check_for_similarity(df_train, df_1b, contours_1b, 
+        cv2.imread('test1B.jpg', cv2.IMREAD_COLOR), "test1B_result.jpg")
+    check_for_similarity(df_train, df_2b, contours_2b, 
+        cv2.imread('test2B.jpg', cv2.IMREAD_COLOR), "test2B_result.jpg")
+    check_for_similarity(df_train, df_3b, contours_3b, 
+        cv2.imread('test3B.jpg', cv2.IMREAD_COLOR), "test3B_result.jpg")
 
 
 if __name__ == '__main__':
