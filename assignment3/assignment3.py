@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """
 --------------------------------------------------------------------------------------------
-@Authors: Nicola Lea Libera (117073), Jenny Döring (119611), Josephin Kröger (124068)
+@Authors: Nicola Lea Libera (117073), Jenny Döring (119611)
 Description: Source code to Assignment 3 of the course Image Analysis and Object Recognition
              at Bauhaus-Universität Weimar.
 --------------------------------------------------------------------------------------------
