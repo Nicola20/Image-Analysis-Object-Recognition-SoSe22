@@ -16,12 +16,12 @@ from scipy.spatial.distance import cdist
 from matplotlib import pyplot as plt
 from mpl_toolkits.mplot3d import Axes3D
 from matplotlib import cm, colors
+from scipy import ndimage
 
 
 MAX_ITER = 300
 
 
-# loading of the image, converting to gray and normalizing it
 def load_image(path):
     # reads image as colour image
     img = cv2.imread(path, cv2.IMREAD_COLOR)
@@ -29,6 +29,15 @@ def load_image(path):
     img = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
     norm = np.float32(img / np.max(img))
     return norm
+
+
+# loading of the image, converting to gray and normalizing it
+def load_gray_image(path):
+    img = cv2.imread(path, cv2.IMREAD_GRAYSCALE)
+    norm = np.float32(img / np.max(img))
+
+    return norm
+
 
 
 def rgb_feature_space(img, color_centroids):
@@ -127,14 +136,32 @@ def plot_image(img, title, img_name):
     plt.savefig(img_name + ".jpg")
 
 
+def gradient_magnitude(img):
+    res = ndimage.gaussian_gradient_magnitude(img, sigma=0.5)
+    return res
+
+
+
 def main():
     # ------------------------------------- TASK 1 --------------------------------------------------
-    print('task 1\n')
+    # print('task 1\n')
 
-    input_ex5_1_img = load_image('input-images/inputEx5_1.jpg')
-    #rgb_feature_space(input_ex5_1_img)
-    # compute the k means clustering algorithm parameters = img, k
-    k_means_clustering(input_ex5_1_img, 5)
+    # input_ex5_1_img = load_image('input-images/inputEx5_1.jpg')
+    # #rgb_feature_space(input_ex5_1_img)
+    # # compute the k means clustering algorithm parameters = img, k
+    # k_means_clustering(input_ex5_1_img, 5)
+
+    # ------------------------------------- TASK 2 --------------------------------------------------
+    print('task 2')
+    print('task a\n')
+
+    task_2_img = load_gray_image("input-images/inputEx5_2.jpg")
+    plot_image(task_2_img, 'Grayscale', 'task_2_grayscale')
+
+    task_2_mag = gradient_magnitude(task_2_img)
+    plot_image(task_2_mag, 'Gradient Magnitude', 'task_2_magnitude')
+
+    
 
 
 if __name__ == '__main__':
