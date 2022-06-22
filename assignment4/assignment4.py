@@ -135,10 +135,12 @@ def plot_image(img, title, img_name):
 
 
 def gradient_magnitude(img):
+    # get gradient magnitude of given image
     return ndimage.gaussian_gradient_magnitude(img, sigma=0.5)
      
 
 def plot_seed_points(img, seed_points):
+    # plot the seed points onto the gradient magnitude image
 
     plt.figure()
     plt.title("Seed Points")
@@ -162,14 +164,19 @@ def non_functional_watershed_segmentation(gradient_img):
     # error, only the neighboorhood() function can be used in the watershed_segmentation()
     # function.
 
+    # counter for retracing the iteration steps
     counter = 0
+    # given seed points
     seed_points = [[40, 110], [140, 90], [5, 60], [130, 20], [70, 30], [100, 130]]
+    # chosen measure_of_similarity
     measure_of_similarity = 0.3
 
+    # array of regions (amount of regions = amount of seed points) 
     region_array = [[] for x in range(len(seed_points))]
     for i in range(len(seed_points)):
         region_array[i].append(seed_points[i])
 
+    # create array for retracing which points in the image were already visited
     visited_points = np.zeros(shape=(gradient_img.shape), dtype=np.uint8)
 
     for i in range(len(region_array)):
@@ -178,9 +185,11 @@ def non_functional_watershed_segmentation(gradient_img):
         counter = 0
         starting_seed_points = [seed_points[i]]
 
+        # while there are still seed points left
         while (len(seed_points) > 0):
             counter, starting_seed_points, visited_points, region_array[i] = do_watershed_segmentation(counter, gradient_img, starting_seed_points, visited_points, region_array[i], measure_of_similarity)
 
+    # for testing
     for l in range(len(region_array)):
         print(len(region_array[l]))
 
@@ -191,23 +200,31 @@ def do_watershed_segmentation(counter, gradient_img, seed_points, visited_points
 
     counter += 1
     print(counter)
+    # new array for updated seed points
     new_seed_points = []
 
     for i in range(len(seed_points)):
 
         current_point = seed_points[i]
+        # get color of the current point
         current_point_color = get_point_color_value(gradient_img, current_point)
+        # get the neighbors of the current point 
         neighbors = neighborhood(gradient_img, current_point)
         try:
+            # get the colors of all neighbors
             neighbor_colors = get_neighbor_color_values(gradient_img, neighbors)
         except:
             break
         
         for j in range(len(neighbors)):
+            # if the current point was not already visited
             if (not visited_points[neighbors[j][0]][neighbors[j][1]].all()):
+                # set point to visited
                 visited_points[neighbors[j][0]][neighbors[j][1]] = 1
 
+                # if the neighbor point of the current point matches the measure of similarity
                 if (np.abs(neighbor_colors[j] - current_point_color) <= measure_of_similarity):
+                    # append neighbor point to the new seed points array and to current region array
                     new_seed_points.append(neighbors[j])
                     region_array.append(neighbors[j])
 
@@ -218,44 +235,62 @@ def watershed_segmentation(gradient_img, seed_points):
 
     # inspired by https://pythonmana.com/2021/12/20211208035633797D.html 
 
+    # chosen measure_of_similarity
     measure_of_similarity = 0.01
+    # create empty array for result image (segmented_array)
     segmented_array = np.zeros(shape=(gradient_img.shape), dtype=np.uint8)
+    # create array for retracing which points in the image were already visited
     visited_points = np.zeros(shape=(gradient_img.shape), dtype=np.uint8)
 
+    # get maximum values of gradient image
     max_x = gradient_img.shape[0]
     max_y = gradient_img.shape[1]
 
+    # for every seed point set the suitable point in the segmented array to white (255)
     for point in seed_points:
         x = point[0]
         y = point[1]
 
         segmented_array[y][x] = 255
 
+    # while there are still seed points left
     while (len(seed_points) > 0):
+        # take one seed point
         point = seed_points.pop(0)
         x = point[0]
         y = point[1]
 
+        # mark its corresponding position in the visited_points array as marked (1)
         visited_points[y][x] = 1
+        # get the neighbors of the current point
         neighbors = neighborhood(gradient_img, point)
 
+        # for every neighbor
         for n in neighbors:
             current_x = n[0]
             current_y = n[1]
 
+            # if the point is inside the image
             if (current_x < 0 or current_y < 0 or current_x >= max_x or current_y >= max_y):
                 continue
 
+            # if the current point was not already visited and
+            # if the neighbor point of the current point matches the measure of similarity
             if (not visited_points[current_y][current_x].all()) and (np.abs(gradient_img[current_y][current_x][0] - gradient_img[y][x][0]) <= measure_of_similarity) :
+                # mark the point in the result image (segmented_array) white (255)
                 segmented_array[current_y][current_x] = 255
+                # mark its corresponding position in the visited_points array as marked (1)
                 visited_points[current_y][current_x] = 1
+                # append point to the seed points array
                 seed_points.append((current_x, current_y))
 
     return segmented_array
         
 
 def put_segmentation_onto_original_image(original_img, segmented_array):
-    
+    # puts the resulting image in function watershed_segmentation() 
+    # onto the original image
+
     max_x = original_img.shape[0]
     max_y = original_img.shape[1]
     
@@ -271,6 +306,8 @@ def put_segmentation_onto_original_image(original_img, segmented_array):
 
 def plot_regions(region_array):
 
+    # plots the different regions (amount dependent on the amount of seed points)
+
     plt.figure()
     plt.title("Regions")
     plt.axis('off')
@@ -285,6 +322,9 @@ def plot_regions(region_array):
 
     
 def neighborhood(gradient_img, point):
+
+    # get all the neighbors of the given point
+    # --> 8-neighborhood
     
     neighbors = []
     max_x = gradient_img.shape[0]
@@ -308,6 +348,8 @@ def neighborhood(gradient_img, point):
 
 
 def get_point_color_value(array, point):
+
+    # get the color of one single point
     
     x = point[0]
     y = point[1]
@@ -317,6 +359,8 @@ def get_point_color_value(array, point):
 
 
 def get_neighbor_color_values(array, neighbors):
+
+    # get the color of an array with neighbor points
 
     neighbor_colors = []
 
