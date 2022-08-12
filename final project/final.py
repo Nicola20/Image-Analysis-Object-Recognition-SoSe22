@@ -31,9 +31,17 @@ def plot_gray_image(img, title, img_name):
 
 
 def template_matching(img, template, stride=1):
+
+    # if template is even then add padding so that we get an uneven kernel size
+    if template.shape[0] % 2 == 0:
+        template = np.pad(template, ((1, 0), (0, 0)), constant_values=0)
+    if template.shape[1] % 2 == 0:
+        template = np.pad(template, ((0, 0), (1, 0)), constant_values=0)
+
     padding_y = int(np.floor(template.shape[0] / 2))
     padding_x = int(np.floor(template.shape[1] / 2))
     padded_img = np.pad(img, ((padding_y, padding_y), (padding_x, padding_x)), constant_values=0)
+    #plot_gray_image(padded_img, "gfcf", "hvgf.jpg")
 
 
 def main():
@@ -57,8 +65,13 @@ def main():
 
     templates = [temp1, temp2, temp3, temp4, temp5, temp6]
     images = [img1, img2, img3, img4, img5, img6]
-
+    #print("template shape: " + str(temp4.shape))
     template_matching(img1, temp1)
+    template_matching(img1, temp2)
+    template_matching(img1, temp3)
+    template_matching(img1, temp4)
+    template_matching(img1, temp5)
+    template_matching(img1, temp6)
 
 
     # ------------------------------------- TASK 2 --------------------------------------------------
