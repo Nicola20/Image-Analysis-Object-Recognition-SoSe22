@@ -35,12 +35,29 @@ def plot_gray_image(img, title, img_name):
 
 
 def template_matching(img, template, stride=1):
+
+    # if template is even then add padding so that we get an uneven kernel size
+    if template.shape[0] % 2 == 0:
+        template = np.pad(template, ((1, 0), (0, 0)), constant_values=0)
+    if template.shape[1] % 2 == 0:
+        template = np.pad(template, ((0, 0), (1, 0)), constant_values=0)
+
     padding_y = int(np.floor(template.shape[0] / 2))
     padding_x = int(np.floor(template.shape[1] / 2))
     padded_img = np.pad(img, ((padding_y, padding_y), (padding_x, padding_x)), constant_values=0)
     filtered_image = normalized_cross_correlation(padded_img, template, (padding_x,padding_y), stride)
     return filtered_image
 
+
+def normalized_cross_correlation(paddedImage, template, padding, stride=1):
+    mean_template_patch = np.mean(template)
+    filtered_image = np.zeros((paddedImage.shape[0]-2*padding[0], paddedImage.shape[1]-2*padding[1]))
+
+    for m in range(filtered_image.shape[0]):
+        for n in range(filtered_image.shape[1]):
+            filtered_image[m,n] = ((template - mean_template_patch) * paddedImage[m:m+template.shape[0],n:n+template.shape[1]]).sum()
+
+    return filtered_image
 
 def normalized_cross_correlation(paddedImage, template, padding, stride=1):
     mean_template_patch = np.mean(template)
