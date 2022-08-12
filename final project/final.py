@@ -7,9 +7,11 @@ Description: Source code to the final project of the course Image Analysis and O
 --------------------------------------------------------------------------------------------
 """
 
+from textwrap import fill
 import numpy as np
 import cv2
 from matplotlib import pyplot as plt
+from matplotlib.patches import Rectangle
 
 
 # loading of the image, converting to gray and normalizing it
@@ -24,12 +26,14 @@ def load_gray_image(path):
 
 
 
-def plot_gray_image(img, title, img_name):
-    print("I was called")
+def plot_gray_image(img, title, img_name, boundingBoxOrigin = None, boundingBoxDims = None):
+
     plt.figure()
     plt.title(title)
     plt.imshow(img, cmap='gray')
     plt.axis('off')
+    #plt.gca().invert_yaxis()
+    plt.gca().add_patch(Rectangle(boundingBoxOrigin, boundingBoxDims[0], boundingBoxDims[1]))
     plt.show()
     plt.savefig(img_name)
 
@@ -38,15 +42,15 @@ def template_matching(img, template, stride=1):
 
     # if template is even then add padding so that we get an uneven kernel size
     if template.shape[0] % 2 == 0:
-        template = np.pad(template, ((1, 0), (0, 0)), constant_values=0)
+        template = np.pad(template, ((1, 0), (0, 0)), constant_values=1)
     if template.shape[1] % 2 == 0:
-        template = np.pad(template, ((0, 0), (1, 0)), constant_values=0)
+        template = np.pad(template, ((0, 0), (1, 0)), constant_values=1)
 
     padding_y = int(np.floor(template.shape[0] / 2))
     padding_x = int(np.floor(template.shape[1] / 2))
-    padded_img = np.pad(img, ((padding_y, padding_y), (padding_x, padding_x)), constant_values=0)
+    padded_img = np.pad(img, ((padding_y, padding_y), (padding_x, padding_x)), constant_values=1)
     filtered_image = normalized_cross_correlation(padded_img, template, (padding_x,padding_y), stride)
-    return filtered_image
+    return filtered_image, padding_x, padding_y
 
 
 def normalized_cross_correlation(paddedImage, template, padding, stride=1):
@@ -101,7 +105,7 @@ def main():
             print("Abort")
             return -1
 
-    filtered_image = template_matching(img1, temp1)
+    filtered_image, padding_x, padding_y = template_matching(img1, temp1)
     ncc_max_index = np.unravel_index(np.argmax(filtered_image, axis=None), filtered_image.shape)
     print("max index: " + str(ncc_max_index))
     print("max value: " + str(filtered_image[ncc_max_index]))
@@ -110,7 +114,7 @@ def main():
     thresholded_image = thresholding(filtered_image)
     #thresholded_image = cv2.threshold(filtered_image, )
 
-    plot_gray_image(filtered_image, "TITLE", "out.jpg")
+    plot_gray_image(filtered_image, "TITLE", "out.jpg", (ncc_max_index[0]-padding_x, ncc_max_index[1]+padding_y), temp1.shape)
     #plot_gray_image(thresholded_image, "TITLE", "out.jpg")
 
 
