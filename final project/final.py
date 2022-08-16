@@ -33,7 +33,7 @@ def plot_gray_image(img, title, img_name, boundingBoxOrigin = None, boundingBoxD
     plt.imshow(img, cmap='gray')
     plt.axis('off')
     #plt.gca().invert_yaxis()
-    plt.gca().add_patch(Rectangle(boundingBoxOrigin, boundingBoxDims[0], boundingBoxDims[1]))
+    plt.gca().add_patch(Rectangle(boundingBoxOrigin, boundingBoxDims[0], boundingBoxDims[1], fill=False, edgecolor='r'))
     plt.show()
     plt.savefig(img_name)
 
