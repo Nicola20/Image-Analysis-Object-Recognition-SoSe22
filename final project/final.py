@@ -7,11 +7,11 @@ Description: Source code to the final project of the course Image Analysis and O
 --------------------------------------------------------------------------------------------
 """
 
+from cProfile import label
 from cmath import sqrt
-from configparser import Interpolation
-from textwrap import fill
-from tkinter import Scale
-from turtle import shape
+import math
+from turtle import distance
+from xml.sax.handler import feature_validation
 import numpy as np
 import cv2
 from matplotlib import pyplot as plt
@@ -70,77 +70,152 @@ def normalized_cross_correlation(paddedImage, template, padding, stride=1):
 
     mean_template_patch = np.mean(template)
     filtered_image = np.zeros((paddedImage.shape[0]-2*padding[0], paddedImage.shape[1]-2*padding[1]))
-    print(filtered_image.shape)
 
     for m in range(filtered_image.shape[0]):
         for n in range(filtered_image.shape[1]):
             sigma_ab = (1 / (template.shape[0]*template.shape[1])) * (template * paddedImage[m:m+template.shape[0],n:n+template.shape[1]]).sum() - mean_template_patch * np.mean(paddedImage[m:m+template.shape[0],n:n+template.shape[1]])
             sigma_a = (1 / (template.shape[0]*template.shape[1])) * (template * template).sum() - (mean_template_patch*mean_template_patch)
             sigma_b = (1 / (template.shape[0]*template.shape[1])) * (paddedImage[m:m+template.shape[0],n:n+template.shape[1]] * paddedImage[m:m+template.shape[0],n:n+template.shape[1]]).sum() - (np.mean(paddedImage[m:m+template.shape[0],n:n+template.shape[1]])**2)
-            filtered_image[m,n] = sigma_ab/(sqrt((sigma_a*sigma_b)))
+            divider = sqrt(sigma_a*sigma_b)
+            filtered_image[m,n] = -1 if divider == 0 else sigma_ab/divider
 
     return filtered_image
+
+
+def nearest_neighbour(vectors, query, k=3):
+    distances = []
+    for v in vectors:
+        distance = np.linalg.norm(v[1]-query)
+        distances.append((v[0],distance))
+
+    sorting = lambda d : d[1]
+    distances = sorted(distances, key=sorting)
+    return distances[:3]
+
+
+def plot_feature_vectors(vectors):
+    plt.figure()
+    plt.title("Feature Vectors")
+    plt.xlabel("Templates")
+    plt.ylabel("NCC")
+    markers=['.','^','1','s','P','*']
+    colors = ['r','g','b','c','m','y']
+
+    for vidx, key in enumerate(vectors):
+
+        x = np.arange(1,len(vectors[key])+1)
+        y = vectors[key]
+        plt.scatter(x, y, s=200, c=colors[vidx], marker=markers[vidx], alpha=0.5, label=key+".jpg")
+
+    plt.legend(loc='lower left')
+    plt.savefig("results/RESULT.jpg")
+
 
 
 def main():
     # ------------------------------------- TASK 1 --------------------------------------------------
     print('task 1\n')
     # templates
-    temp1 = load_gray_image('words/1.jpg')
-    temp2 = load_gray_image('words/2.jpg')
-    temp3 = load_gray_image('words/3.jpg')
-    temp4 = load_gray_image('words/4.jpg')
-    temp5 = load_gray_image('words/5.jpg')
-    temp6 = load_gray_image('words/6.jpg')
+    templates = dict()
+    templates['1'] = load_gray_image('words/1.jpg')
+    templates['2'] = load_gray_image('words/2.jpg')
+    templates['3'] = load_gray_image('words/3.jpg')
+    templates['4'] = load_gray_image('words/4.jpg')
+    templates['5'] = load_gray_image('words/5.jpg')
+    templates['6'] = load_gray_image('words/6.jpg')
 
     # images
-    img1 = load_gray_image('images/1.jpg')
-    img2 = load_gray_image('images/2.jpg')
-    img3 = load_gray_image('images/3.jpg')
-    img4 = load_gray_image('images/4.jpg')
-    img5 = load_gray_image('images/5.jpg')
-    img6 = load_gray_image('images/6.jpg')
+    images = dict()
+    images['1'] = load_gray_image('images/1.jpg')
+    images['2'] = load_gray_image('images/2.jpg')
+    images['3'] = load_gray_image('images/3.jpg')
+    images['4'] = load_gray_image('images/4.jpg')
+    images['5'] = load_gray_image('images/5.jpg')
+    images['6'] = load_gray_image('images/6.jpg')
 
-    templates = [temp1, temp2, temp3, temp4, temp5, temp6]
-    images = [img1, img2, img3, img4, img5, img6]
     scales = [1.0, 0.1,0.25, 0.5,0.75, 0.9]
-    scales = [1.0]
 
-    for t in templates:
+    for t in templates.values():
         if t is None:
             print("Abort")
             return -1
 
-    for i in images:
+    for i in images.values():
         if i is None:
             print("Abort")
             return -1
 
+    feature_vectors = dict()
 
-    for iidx,image in enumerate(images):
-        for tidx,template in enumerate(templates):
+    for iidx,image in enumerate(images.values()):
+        feature_vectors[str(iidx+1)] = np.zeros(len(templates.values()))
+        for tidx,template in enumerate(templates.values()):
+            max_ncc_over_scales = -1.0
             for sidx,scale in enumerate(scales):
                 filtered_image, padding_x, padding_y = template_matching(image, template, scale)
                 ncc_max_index = np.unravel_index(np.argmax(filtered_image, axis=None), filtered_image.shape)
+                print(filtered_image[ncc_max_index])
+                max_ncc_over_scales = max(max_ncc_over_scales, filtered_image[ncc_max_index])
                 #print("max index: " + str(ncc_max_index))
                 #print("max value: " + str(filtered_image[ncc_max_index]))
 
                 thresholding = np.vectorize(lambda v: 1 if v>0.5 else 0)
                 thresholded_image = thresholding(filtered_image)
-                #thresholded_image = cv2.threshold(filtered_image, )
 
-                plot_gray_image(image,
-                    "Image "+str(iidx+1)+" Temp "+str(tidx+1)+" Scale "+str(scale),
-                    "results/scale1/Image"+str(iidx+1)+"_temp"+str(tidx+1)+"_scale"+str(scale)+".jpg",
-                    (ncc_max_index[1]-padding_x, ncc_max_index[0]-padding_y),
-                    template.shape
-                )
+            feature_vectors[str(iidx+1)][tidx] = max_ncc_over_scales
+
+                #plot_gray_image(image,
+                #    "Image "+str(iidx+1)+" Temp "+str(tidx+1)+" Scale "+str(scale),
+                #    "results/scale1/Image"+str(iidx+1)+"_temp"+str(tidx+1)+"_scale"+str(scale)+".jpg",
+                #    (ncc_max_index[1]-padding_x, ncc_max_index[0]-padding_y),
+                #    template.shape
+                #)
                 #plot_gray_image(thresholded_image, "TITLE", "out.jpg")
 
+    """feature_vectors['1'] = np.array([0.86933977, 0.91854587, 0.89261441, 0.66698355, 0.6340318 , 0.4428864 ])
+    feature_vectors['2'] = np.array([0.76703889, 0.80521685, 0.73824314, 0.74996759, 0.61837406, 0.52716945])
+    feature_vectors['3'] = np.array([0.67898011, 0.64412394, 0.74683243, 0.87176417, 0.79158227, 0.850059  ])
+    feature_vectors['4'] = np.array([0.7230937 , 0.62198174, 0.74330082, 0.92336739, 0.93324744, 0.85880204])
+    feature_vectors['5'] = np.array([0.77387798, 0.86428489, 0.68208233, 0.6822719 , 0.6480239 , 0.0]) #9.27746143
+    feature_vectors['6'] = np.array([0.65916653, 0.63556474, 0.74821683, 0.79581352, 0.74234451, 0.64304265])
+    """
+    plot_feature_vectors(feature_vectors)
+
+    training = []
+    training.append(('1',feature_vectors.get('1'),'violin'))
+    training.append(('2',feature_vectors.get('2'),'violin'))
+    training.append(('3',feature_vectors.get('3'),'guitar'))
+    training.append(('4',feature_vectors.get('4'),'guitar'))
+
+    test = []
+    test.append(('5',feature_vectors.get('5'),'violin'))
+    test.append(('6',feature_vectors.get('6'),'guitar'))
+
+    for query in test:
+        nn = nearest_neighbour(training, query[1])
+        nn = [i[0] for i in nn]
+        print(nn)
+        frequency = dict()
+        for e in training:
+            if e[0] in nn:
+                if e[2] not in frequency:
+                    frequency[e[2]] = 1
+                else:
+                    frequency[e[2]] += 1
+
+        plt.figure()
+        title = "Votes: "
+        for k in frequency.keys():
+            title = title+k+":"+str(frequency[k])+", "
+        plt.title(title)
+        plt.imshow(images[query[0]], cmap='gray')
+        plt.axis('off')
+        plt.savefig(query[0]+'_labeled.jpg')
 
 
 
     # ------------------------------------- TASK 2 --------------------------------------------------
+
 
 
 if __name__ == '__main__':
